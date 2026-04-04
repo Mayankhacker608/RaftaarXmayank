@@ -23,10 +23,10 @@ function Nav() {
       initial={{ y: -120, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.7, ease: "easeOut" }}
-      className="fixed left-1/2 top-6 z-50 w-[90%] -translate-x-1/2 rounded-2xl border border-gray-700 bg-black/80 shadow-lg backdrop-blur-md md:w-[70%]"
+      className="fixed left-1/2 top-4 z-50 w-[calc(100%-1rem)] max-w-6xl -translate-x-1/2 rounded-2xl border border-gray-700 bg-black/80 shadow-lg backdrop-blur-md sm:top-6 sm:w-[92%] lg:w-[70%]"
     >
-      <div className="flex items-center justify-between px-6 py-4">
-        <h1 className="bg-gradient-to-r from-white to-yellow-400 bg-clip-text text-2xl font-extrabold text-transparent">
+      <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        <h1 className="bg-gradient-to-r from-white to-yellow-400 bg-clip-text text-xl font-extrabold text-transparent sm:text-2xl">
           RaftaarX
         </h1>
 
@@ -58,7 +58,8 @@ function Nav() {
             <button
               type="button"
               onClick={() => setIsOpen(!isOpen)}
-              className="relative z-20 text-white focus:outline-none"
+              className="relative z-20 rounded-lg p-1 text-white focus:outline-none"
+              aria-label="Toggle menu"
             >
               <span
                 className={`mb-1 block h-0.5 w-6 bg-white transition-all duration-300 ${
@@ -82,7 +83,7 @@ function Nav() {
             <button
               type="button"
               onClick={logout}
-              className="relative hidden items-center justify-center overflow-hidden rounded-lg border border-gray-600 px-6 py-2 font-semibold text-white group md:inline-flex"
+              className="group relative hidden items-center justify-center overflow-hidden rounded-lg border border-gray-600 px-6 py-2 font-semibold text-white md:inline-flex"
             >
               <span className="absolute inset-0 h-full w-full bg-gradient-to-r from-yellow-400 to-yellow-600 opacity-0 transition duration-300 group-hover:opacity-100" />
               <span className="relative z-10 group-hover:text-black">Logout</span>
@@ -90,7 +91,7 @@ function Nav() {
           ) : (
             <Link
               to="/auth"
-              className="relative hidden items-center justify-center overflow-hidden rounded-lg border border-gray-600 px-6 py-2 font-semibold text-white group md:inline-flex"
+              className="group relative hidden items-center justify-center overflow-hidden rounded-lg border border-gray-600 px-6 py-2 font-semibold text-white md:inline-flex"
             >
               <span className="absolute inset-0 h-full w-full bg-gradient-to-r from-yellow-400 to-yellow-600 opacity-0 transition duration-300 group-hover:opacity-100" />
               <span className="relative z-10 group-hover:text-black">Login</span>
@@ -101,7 +102,7 @@ function Nav() {
         <motion.ul
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: isOpen ? 1 : 0, y: isOpen ? 0 : -20 }}
-          className={`absolute left-0 top-full flex w-full flex-col items-center space-y-4 rounded-b-2xl bg-black/90 py-6 backdrop-blur-md transition-all duration-300 md:hidden ${
+          className={`absolute left-0 top-full flex w-full flex-col items-center gap-4 rounded-b-2xl border-t border-white/10 bg-black/95 px-4 py-5 backdrop-blur-md transition-all duration-300 md:hidden ${
             isOpen ? "block" : "hidden"
           }`}
         >
@@ -124,10 +125,22 @@ function Nav() {
           <Link
             to="/auth"
             onClick={() => setIsOpen(false)}
-            className="rounded-full border border-yellow-400 px-5 py-2 text-sm font-semibold text-yellow-300"
+            className="w-full max-w-xs rounded-full border border-yellow-400 px-5 py-2 text-center text-sm font-semibold text-yellow-300"
           >
             {user ? "Switch Dashboard" : "Login / Signup"}
           </Link>
+          {user && (
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                setIsOpen(false);
+              }}
+              className="w-full max-w-xs rounded-full bg-yellow-400 px-5 py-2 text-sm font-semibold text-black"
+            >
+              Logout
+            </button>
+          )}
         </motion.ul>
       </div>
     </motion.nav>

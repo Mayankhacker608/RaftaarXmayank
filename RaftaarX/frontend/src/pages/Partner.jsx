@@ -115,7 +115,7 @@ function Partner() {
   };
 
   return (
-    <motion.div className="min-h-screen bg-gray-900 p-6 font-sans text-white">
+    <motion.div className="min-h-screen bg-gray-900 px-4 py-6 font-sans text-white sm:px-6">
       <motion.button
         type="button"
         onClick={() => navigate("/auth")}
@@ -126,7 +126,7 @@ function Partner() {
         Back
       </motion.button>
 
-      <motion.h1 className="mb-3 text-center text-4xl font-extrabold tracking-wide text-yellow-400 md:text-5xl">
+      <motion.h1 className="mb-3 text-center text-3xl font-extrabold tracking-wide text-yellow-400 sm:text-4xl md:text-5xl">
         Partner Registration
       </motion.h1>
       <p className="mb-8 text-center text-gray-300">
@@ -135,7 +135,7 @@ function Partner() {
 
       <motion.form
         onSubmit={handleSubmit}
-        className="mx-auto flex max-w-3xl flex-col gap-6 rounded-2xl bg-gray-900 p-8 shadow-2xl"
+        className="mx-auto flex max-w-3xl flex-col gap-6 rounded-2xl bg-gray-900 p-5 shadow-2xl sm:p-8"
       >
         {error && (
           <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -193,13 +193,13 @@ function Partner() {
               whileHover={{ scale: 1.02 }}
               className="relative flex flex-col rounded-lg bg-gray-800 p-4"
             >
-              <label className="mb-1 text-gray-300 uppercase">{doc}</label>
+          <label className="mb-1 text-sm text-gray-300 uppercase">{doc}</label>
               <input
                 type="file"
                 name={doc}
                 onChange={handleChange}
                 accept="image/*,.pdf"
-                className="text-white"
+                className="w-full text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-yellow-400 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
               />
               {uploadStatus[doc] && (
                 <CheckCircle className="absolute right-3 top-3 text-green-400" />
@@ -216,7 +216,7 @@ function Partner() {
             multiple
             onChange={handleChange}
             accept="image/*"
-            className="text-white"
+            className="w-full text-sm text-white file:mr-3 file:rounded-lg file:border-0 file:bg-yellow-400 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
           />
           {uploadStatus.bikeImages && (
             <CheckCircle className="absolute right-3 top-3 text-green-400" />
@@ -244,7 +244,7 @@ function Partner() {
         </motion.button>
 
         {partnerStatus && (
-          <motion.div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-gray-700 p-4 text-center font-semibold text-yellow-400">
+          <motion.div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-lg bg-gray-700 p-4 text-center font-semibold text-yellow-400 sm:flex-row">
             <CheckCircle className="text-green-400" />
             {partnerStatus !== "pending"
               ? `Status: ${partnerStatus.toUpperCase()}`
@@ -262,7 +262,7 @@ function Partner() {
             {applications.map((application) => (
               <div
                 key={application._id}
-                className="flex items-center justify-between rounded-xl bg-gray-900/80 px-4 py-3"
+                className="flex flex-col gap-2 rounded-xl bg-gray-900/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p className="font-semibold">{application.bikeNo}</p>

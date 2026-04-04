@@ -42,7 +42,7 @@ function User() {
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-6 font-sans text-white"
+      className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black px-4 py-6 font-sans text-white sm:px-6"
     >
       <motion.button
         type="button"
@@ -58,7 +58,7 @@ function User() {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.5 }}
-        className="mb-3 text-center text-4xl font-extrabold tracking-wide text-yellow-400 md:text-5xl"
+        className="mb-3 text-center text-3xl font-extrabold tracking-wide text-yellow-400 sm:text-4xl md:text-5xl"
       >
         Book Your Ride
       </motion.h1>
@@ -70,7 +70,7 @@ function User() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.6 }}
-        className="mx-auto mb-10 max-w-md rounded-2xl bg-gray-900 p-6 shadow-2xl"
+        className="mx-auto mb-10 max-w-md rounded-2xl bg-gray-900 p-5 shadow-2xl sm:p-6"
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3 rounded-lg bg-gray-800 p-3 transition hover:ring-2 hover:ring-yellow-500">
@@ -101,12 +101,12 @@ function User() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.5 }}
-        className="mb-6 text-center text-2xl font-semibold"
+        className="mb-6 text-center text-xl font-semibold sm:text-2xl"
       >
         Select Vehicle
       </motion.h2>
 
-      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
         <motion.div
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
@@ -117,7 +117,7 @@ function User() {
               : "bg-gray-800 text-white hover:bg-gray-700"
           }`}
         >
-          <Bike className="mx-auto mb-3 h-28 w-28" />
+          <Bike className="mx-auto mb-3 h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28" />
           <p className="text-lg font-semibold">Bike</p>
         </motion.div>
 
@@ -131,7 +131,7 @@ function User() {
               : "bg-gray-800 text-white hover:bg-gray-700"
           }`}
         >
-          <Car className="mx-auto mb-3 h-28 w-28" />
+          <Car className="mx-auto mb-3 h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28" />
           <p className="text-lg font-semibold">Cab</p>
         </motion.div>
 
@@ -145,7 +145,7 @@ function User() {
               : "bg-gray-800 text-white hover:bg-gray-700"
           }`}
         >
-          <CarFront className="mx-auto mb-3 h-28 w-28" />
+          <CarFront className="mx-auto mb-3 h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28" />
           <p className="text-lg font-semibold">Auto</p>
         </motion.div>
       </div>
@@ -163,7 +163,7 @@ function User() {
           disabled={submitting}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="rounded-xl bg-yellow-500 px-10 py-3 font-bold text-black shadow-lg transition-all hover:shadow-yellow-400/50 disabled:opacity-70"
+          className="rounded-xl bg-yellow-500 px-6 py-3 text-sm font-bold text-black shadow-lg transition-all hover:shadow-yellow-400/50 disabled:opacity-70 sm:px-10 sm:text-base"
         >
           {submitting ? "Saving booking..." : "Continue to Payment ->"}
         </motion.button>

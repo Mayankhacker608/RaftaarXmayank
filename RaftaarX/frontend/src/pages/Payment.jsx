@@ -71,7 +71,7 @@ function Payment() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black px-6 py-14 text-white"
+      className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black px-4 py-10 text-white sm:px-6 sm:py-14"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
@@ -85,11 +85,11 @@ function Payment() {
       </button>
 
       <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="rounded-[28px] border border-white/10 bg-white/5 p-8">
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 sm:p-8">
           <p className="text-sm uppercase tracking-[0.3em] text-yellow-400">
             Booking Summary
           </p>
-          <h1 className="mt-4 text-4xl font-black">Payment Confirmation</h1>
+          <h1 className="mt-4 text-3xl font-black sm:text-4xl">Payment Confirmation</h1>
           <div className="mt-8 space-y-4 text-gray-300">
             <div className="rounded-2xl bg-black/30 p-4">
               <p className="text-sm text-gray-400">Pickup</p>
@@ -112,7 +112,7 @@ function Payment() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-yellow-500/20 bg-gray-950/80 p-8">
+        <div className="rounded-[28px] border border-yellow-500/20 bg-gray-950/80 p-5 sm:p-8">
           <h2 className="text-2xl font-bold text-yellow-400">
             Choose payment method
           </h2>

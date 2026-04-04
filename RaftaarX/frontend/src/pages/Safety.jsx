@@ -29,7 +29,7 @@ function Safety() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-b from-gray-900 to-black px-6 pt-32 text-white md:px-20 md:pt-40"
+      className="min-h-screen bg-gradient-to-b from-gray-900 to-black px-6 pt-28 text-white sm:px-8 md:px-20 md:pt-40"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7, ease: "easeOut" }}
@@ -54,11 +54,11 @@ function Safety() {
           stay secure while using our platform.
         </motion.p>
 
-        <div className="mt-10 flex flex-col gap-10 md:flex-row">
+        <div className="mt-10 grid w-full grid-cols-1 gap-6 md:grid-cols-3 md:gap-10">
           {safetyTips.map((tip, index) => (
             <motion.div
               key={index}
-              className="flex flex-1 flex-col items-center rounded-2xl bg-gray-800/60 p-6 text-center shadow-lg backdrop-blur-md"
+              className="flex h-full flex-col items-center rounded-2xl bg-gray-800/60 p-6 text-center shadow-lg backdrop-blur-md"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.2 * index }}

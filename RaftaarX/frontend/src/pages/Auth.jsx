@@ -162,27 +162,27 @@ function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.18),_transparent_35%),linear-gradient(135deg,#050505,#111827,#000000)] px-6 py-16 text-white">
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.18),_transparent_35%),linear-gradient(135deg,#050505,#111827,#000000)] px-4 py-8 text-white sm:px-6 sm:py-12 md:py-16">
+      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-[32px] border border-yellow-500/20 bg-white/5 p-8 backdrop-blur"
+          className="rounded-[32px] border border-yellow-500/20 bg-white/5 p-5 backdrop-blur sm:p-8"
         >
           <p className="text-sm uppercase tracking-[0.35em] text-yellow-400">
             Fast Access
           </p>
-          <h1 className="mt-4 text-4xl font-black leading-tight md:text-6xl">
+          <h1 className="mt-4 text-3xl font-black leading-tight sm:text-4xl md:text-6xl">
             Login ya signup karke seedha apne dashboard tak pahunchiye.
           </h1>
-          <p className="mt-6 max-w-2xl text-lg text-gray-300">
+          <p className="mt-6 max-w-2xl text-base text-gray-300 sm:text-lg">
             Book Now ke baad yahin role choose kijiye. Successful auth ke baad app
             direct user, partner, ya admin panel open karega. Admin signup security
             key ke saath protected hai, aur user/partner roles me Google sign-in
             available hai.
           </p>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
             {roles.map(({ label, value, icon }) => (
               <button
                 key={value}
@@ -213,9 +213,9 @@ function Auth() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           onSubmit={handleSubmit}
-          className="rounded-[32px] border border-white/10 bg-gray-950/80 p-8 shadow-2xl"
+          className="rounded-[32px] border border-white/10 bg-gray-950/80 p-5 shadow-2xl sm:p-8"
         >
-          <div className="flex gap-3 rounded-full bg-white/5 p-2">
+          <div className="flex gap-2 rounded-full bg-white/5 p-2 sm:gap-3">
             {["login", "signup"].map((currentMode) => (
               <button
                 key={currentMode}
@@ -322,9 +322,9 @@ function Auth() {
           </div>
 
           {role !== "admin" && googleClientId && (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="mb-3 text-sm text-gray-300">Quick access with Google</p>
-              <div ref={googleButtonRef} className="min-h-[44px]" />
+              <div ref={googleButtonRef} className="min-h-[44px] max-w-full overflow-hidden" />
               {googleLoading && (
                 <p className="mt-3 text-sm text-gray-400">Signing in with Google...</p>
               )}

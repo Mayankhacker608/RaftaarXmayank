@@ -23,7 +23,7 @@ function Support() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-b from-gray-900 to-black px-6 pt-32 text-white md:px-20 md:pt-40"
+      className="min-h-screen bg-gradient-to-b from-gray-900 to-black px-6 pt-28 text-white sm:px-8 md:px-20 md:pt-40"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7, ease: "easeOut" }}
@@ -48,7 +48,7 @@ function Support() {
           out for personal assistance.
         </motion.p>
 
-        <div className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-10">
           {supportResources.map((resource, index) => (
             <motion.div
               key={index}

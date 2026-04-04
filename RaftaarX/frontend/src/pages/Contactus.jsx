@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 function ContactUs() {
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-b from-gray-900 to-black px-6 pt-32 text-white md:px-20 md:pt-40"
+      className="min-h-screen bg-gradient-to-b from-gray-900 to-black px-6 pt-28 text-white sm:px-8 md:px-20 md:pt-40"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7, ease: "easeOut" }}
@@ -16,10 +16,10 @@ function ContactUs() {
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
         >
-          <h1 className="text-4xl font-bold text-yellow-400 md:text-5xl">
+          <h1 className="text-3xl font-bold text-yellow-400 sm:text-4xl md:text-5xl">
             Contact Us
           </h1>
-          <p className="text-lg leading-relaxed text-gray-300 md:text-xl">
+          <p className="text-base leading-relaxed text-gray-300 sm:text-lg md:text-xl">
             Have questions or need assistance? Reach out to our team and we&apos;ll
             respond as quickly as possible.
           </p>

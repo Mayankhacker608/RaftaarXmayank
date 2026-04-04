@@ -62,12 +62,12 @@ function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6 text-white">
+    <div className="min-h-screen bg-gray-900 px-4 py-6 text-white sm:px-6">
       <p className="mb-4 text-center text-gray-300">Welcome, {user?.name}</p>
       <motion.h1
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="mb-10 text-center text-4xl font-bold text-yellow-400"
+        className="mb-10 text-center text-3xl font-bold text-yellow-400 sm:text-4xl"
       >
         Admin Dashboard
       </motion.h1>
@@ -102,10 +102,10 @@ function Admin() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.02 }}
-            className="flex flex-col gap-4 rounded-2xl bg-gray-800 p-6 shadow-lg"
+            className="flex flex-col gap-4 rounded-2xl bg-gray-800 p-5 shadow-lg sm:p-6"
           >
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">{partner.name}</h2>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold sm:text-2xl">{partner.name}</h2>
               <span
                 className={`rounded-full px-3 py-1 text-sm font-bold ${
                   partner.status === "approved"
@@ -124,7 +124,7 @@ function Admin() {
             <p>Address: {partner.address}</p>
             <p>Bike No: {partner.bikeNo}</p>
 
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {["aadhar", "dl", "rc", "insurance"].map((doc) => (
                 <div
                   key={doc}
@@ -146,7 +146,7 @@ function Admin() {
               ))}
             </div>
 
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {partner.bikeImages?.length ? (
                 partner.bikeImages.map((img, idx) => (
                   <img
@@ -162,7 +162,7 @@ function Admin() {
             </div>
 
             {partner.status === "pending" && (
-              <div className="mt-4 flex gap-4">
+              <div className="mt-4 flex flex-col gap-4 sm:flex-row">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
