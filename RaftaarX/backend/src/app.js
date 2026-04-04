@@ -1,0 +1,87 @@
+import "dotenv/config";
+import cors from "cors";
+import express from "express";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+
+import { connectDatabase } from "./config/db.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+import partnerRoutes from "./routes/partnerRoutes.js";
+
+const app = express();
+const defaultClient = process.env.CLIENT_URL || "http://localhost:5173";
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultClient)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.set("trust proxy", 1);
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        localhostPattern.test(origin)
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin is not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDatabase();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+
+app.get("/api/health", (_req, res) => {
+  res.json({ success: true, message: "RaftaarX backend is running" });
+});
+
+app.use("/api", apiLimiter);
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/partners", partnerRoutes);
+app.use("/api/admin", adminRoutes);
+
+app.use((error, _req, res, _next) => {
+  const statusCode = error.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: error.message || "Internal server error",
+  });
+});
+
+export default app;
