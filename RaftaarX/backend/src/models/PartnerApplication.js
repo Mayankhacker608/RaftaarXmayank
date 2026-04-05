@@ -33,6 +33,26 @@ const partnerApplicationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    phoneNumber: {
+      type: String,
+      trim: true,
+    },
+    vehicleType: {
+      type: String,
+      trim: true,
+    },
+    vehicleBrand: {
+      type: String,
+      trim: true,
+    },
+    vehicleModel: {
+      type: String,
+      trim: true,
+    },
+    vehicleColor: {
+      type: String,
+      trim: true,
+    },
     bikeNo: {
       type: String,
       required: true,
@@ -48,6 +68,36 @@ const partnerApplicationSchema = new mongoose.Schema(
     rc: fileSchema,
     insurance: fileSchema,
     bikeImages: [fileSchema],
+    bankName: {
+      type: String,
+      trim: true,
+    },
+    accountHolderName: {
+      type: String,
+      trim: true,
+    },
+    accountNumber: {
+      type: String,
+      trim: true,
+    },
+    ifscCode: {
+      type: String,
+      trim: true,
+    },
+    videoKycStatus: {
+      type: String,
+      enum: ["pending", "verified"],
+      default: "pending",
+    },
+    pricingPlan: {
+      type: String,
+      trim: true,
+    },
+    pricePerKm: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

@@ -21,7 +21,23 @@ router.post(
   ]),
   async (req, res, next) => {
     try {
-      const { name, fatherName, address, bikeNo } = req.body;
+      const {
+        name,
+        fatherName,
+        address,
+        bikeNo,
+        phoneNumber,
+        vehicleType,
+        vehicleBrand,
+        vehicleModel,
+        vehicleColor,
+        bankName,
+        accountHolderName,
+        accountNumber,
+        ifscCode,
+        pricingPlan,
+        pricePerKm,
+      } = req.body;
       const files = req.files || {};
 
       if (!name || !fatherName || !address || !bikeNo) {
@@ -48,11 +64,22 @@ router.post(
         fatherName,
         address,
         bikeNo,
+        phoneNumber,
+        vehicleType,
+        vehicleBrand,
+        vehicleModel,
+        vehicleColor,
         aadhar: toStoredFile(files.aadhar[0]),
         dl: toStoredFile(files.dl[0]),
         rc: toStoredFile(files.rc[0]),
         insurance: toStoredFile(files.insurance[0]),
         bikeImages: files.bikeImages.map(toStoredFile),
+        bankName,
+        accountHolderName,
+        accountNumber,
+        ifscCode,
+        pricingPlan,
+        pricePerKm: Number(pricePerKm) || 0,
       });
 
       await sendMailIfConfigured({

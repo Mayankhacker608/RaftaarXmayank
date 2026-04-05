@@ -1,15 +1,48 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle, Eye, XCircle } from "lucide-react";
+import {
+  Bike,
+  CheckCircle2,
+  Eye,
+  LayoutDashboard,
+  ShieldCheck,
+  UserRoundCheck,
+  XCircle,
+} from "lucide-react";
 
 import { useAuth } from "../hooks/useAuth.js";
 import { api } from "../lib/api.js";
+
+function formatDate(value) {
+  return new Date(value).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function badgeClass(status) {
+  if (status === "approved" || status === "completed") {
+    return "bg-green-500/15 text-green-300";
+  }
+
+  if (status === "rejected") {
+    return "bg-red-500/15 text-red-300";
+  }
+
+  if (status === "confirmed") {
+    return "bg-blue-500/15 text-blue-300";
+  }
+
+  return "bg-yellow-500/15 text-yellow-300";
+}
 
 function Admin() {
   const { token, user } = useAuth();
   const [partners, setPartners] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("partners");
+  const [updatingId, setUpdatingId] = useState("");
   const [error, setError] = useState("");
 
   const loadDashboard = useCallback(async () => {
@@ -32,8 +65,35 @@ function Admin() {
     loadDashboard();
   }, [loadDashboard]);
 
+  const dashboardStats = useMemo(
+    () => [
+      {
+        label: "Applications",
+        value: partners.length,
+        icon: LayoutDashboard,
+      },
+      {
+        label: "Pending Review",
+        value: partners.filter((partner) => partner.status === "pending").length,
+        icon: ShieldCheck,
+      },
+      {
+        label: "Approved Partners",
+        value: partners.filter((partner) => partner.status === "approved").length,
+        icon: UserRoundCheck,
+      },
+      {
+        label: "Bookings",
+        value: bookings.length,
+        icon: Bike,
+      },
+    ],
+    [bookings.length, partners]
+  );
+
   const updateStatus = async (id, status) => {
     try {
+      setUpdatingId(id);
       const response = await api.patch(`/admin/partners/${id}/status`, { status }, token);
       setPartners((previous) =>
         previous.map((partner) =>
@@ -42,12 +102,14 @@ function Admin() {
       );
     } catch (updateError) {
       setError(updateError.message);
+    } finally {
+      setUpdatingId("");
     }
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-400">
+      <div className="flex min-h-screen items-center justify-center bg-[#020617] text-gray-300">
         Loading admin dashboard...
       </div>
     );
@@ -55,160 +117,223 @@ function Admin() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-900 text-gray-400">
+      <div className="flex min-h-screen items-center justify-center bg-[#020617] px-6 text-center text-red-300">
         {error}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 px-4 py-6 text-white sm:px-6">
-      <p className="mb-4 text-center text-gray-300">Welcome, {user?.name}</p>
-      <motion.h1
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="mb-10 text-center text-3xl font-bold text-yellow-400 sm:text-4xl"
-      >
-        Admin Dashboard
-      </motion.h1>
-
-      <div className="mb-8 grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl bg-gray-800 p-5">
-          <p className="text-sm text-gray-400">Partner Applications</p>
-          <p className="mt-2 text-3xl font-bold">{partners.length}</p>
-        </div>
-        <div className="rounded-2xl bg-gray-800 p-5">
-          <p className="text-sm text-gray-400">Approved Partners</p>
-          <p className="mt-2 text-3xl font-bold">
-            {partners.filter((partner) => partner.status === "approved").length}
-          </p>
-        </div>
-        <div className="rounded-2xl bg-gray-800 p-5">
-          <p className="text-sm text-gray-400">Bookings</p>
-          <p className="mt-2 text-3xl font-bold">{bookings.length}</p>
-        </div>
-      </div>
-
-      {!partners.length && (
-        <div className="mb-8 rounded-2xl bg-gray-800 p-6 text-center text-gray-400">
-          No partner applications found yet.
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {partners.map((partner) => (
-          <motion.div
-            key={partner._id}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.02 }}
-            className="flex flex-col gap-4 rounded-2xl bg-gray-800 p-5 shadow-lg sm:p-6"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-semibold sm:text-2xl">{partner.name}</h2>
-              <span
-                className={`rounded-full px-3 py-1 text-sm font-bold ${
-                  partner.status === "approved"
-                    ? "bg-green-600"
-                    : partner.status === "rejected"
-                    ? "bg-red-600"
-                    : "bg-yellow-500"
-                }`}
-              >
-                {partner.status.toUpperCase()}
-              </span>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.12),_transparent_28%),linear-gradient(160deg,#020617,#0f172a,#111827)] px-4 py-6 text-white sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[32px] border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur sm:p-8"
+        >
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.35em] text-yellow-400">
+                Admin Control Room
+              </p>
+              <h1 className="mt-3 text-3xl font-black sm:text-4xl">
+                Welcome, {user?.name}
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm text-gray-300 sm:text-base">
+                Partner approvals, booking activity, aur operational overview ek hi
+                dashboard me manage kijiye.
+              </p>
             </div>
 
-            <p>Email: {partner.user?.email}</p>
-            <p>Father's Name: {partner.fatherName}</p>
-            <p>Address: {partner.address}</p>
-            <p>Bike No: {partner.bikeNo}</p>
-
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {["aadhar", "dl", "rc", "insurance"].map((doc) => (
-                <div
-                  key={doc}
-                  className="flex items-center justify-between rounded bg-gray-700 p-2 hover:bg-gray-600"
-                >
-                  <span className="truncate">{doc.toUpperCase()}</span>
-                  {partner[doc] ? (
-                    <a
-                      href={api.asset(partner[doc].path)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Eye className="text-yellow-400" />
-                    </a>
-                  ) : (
-                    <span className="text-sm text-gray-400">No file</span>
-                  )}
-                </div>
-              ))}
+            <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-sm text-yellow-100">
+              {partners.filter((partner) => partner.status === "pending").length} pending
+              applications need review
             </div>
+          </div>
 
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {partner.bikeImages?.length ? (
-                partner.bikeImages.map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={api.asset(img.path)}
-                    alt={`Bike ${idx + 1}`}
-                    className="h-32 w-full rounded-lg object-cover"
-                  />
-                ))
-              ) : (
-                <span className="text-gray-400">No bike images uploaded</span>
-              )}
-            </div>
-
-            {partner.status === "pending" && (
-              <div className="mt-4 flex flex-col gap-4 sm:flex-row">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => updateStatus(partner._id, "approved")}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 py-2 font-bold text-black"
-                >
-                  <CheckCircle /> Approve
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => updateStatus(partner._id, "rejected")}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 py-2 font-bold text-black"
-                >
-                  <XCircle /> Reject
-                </motion.button>
-              </div>
-            )}
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="mt-12 rounded-2xl bg-gray-800 p-6 shadow-lg">
-        <h2 className="text-2xl font-bold text-yellow-400">Recent Bookings</h2>
-        {bookings.length ? (
-          <div className="mt-4 space-y-3">
-            {bookings.slice(0, 5).map((booking) => (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {dashboardStats.map((item) => (
               <div
-                key={booking._id}
-                className="flex flex-col gap-2 rounded-xl bg-gray-900/80 px-4 py-3 md:flex-row md:items-center md:justify-between"
+                key={item.label}
+                className="rounded-2xl border border-white/10 bg-black/20 p-5"
               >
-                <div>
-                  <p className="font-semibold">{booking.user?.name}</p>
-                  <p className="text-sm text-gray-400">
-                    {booking.pickup} to {booking.destination}
-                  </p>
-                </div>
-                <div className="text-sm text-gray-300">
-                  {booking.vehicle} | {booking.status}
-                </div>
+                <item.icon className="h-6 w-6 text-yellow-400" />
+                <p className="mt-4 text-sm text-gray-300">{item.label}</p>
+                <p className="mt-2 text-3xl font-bold">{item.value}</p>
               </div>
             ))}
           </div>
-        ) : (
-          <p className="mt-4 text-gray-400">No bookings yet.</p>
-        )}
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            {[
+              { label: "Partner Applications", value: "partners" },
+              { label: "Recent Bookings", value: "bookings" },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setActiveTab(tab.value)}
+                className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+                  activeTab === tab.value
+                    ? "bg-yellow-400 text-black"
+                    : "border border-white/10 bg-white/5 text-gray-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "partners" ? (
+            <div className="mt-8 grid gap-6 xl:grid-cols-2">
+              {partners.length ? (
+                partners.map((partner) => (
+                  <motion.div
+                    key={partner._id}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-[28px] border border-white/10 bg-black/20 p-5"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h2 className="text-xl font-semibold text-white">{partner.name}</h2>
+                        <p className="mt-1 text-sm text-gray-400">
+                          {partner.user?.email}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${badgeClass(
+                          partner.status
+                        )}`}
+                      >
+                        {partner.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-5 grid gap-3 text-sm text-gray-300 sm:grid-cols-2">
+                      <p>
+                        <span className="text-gray-400">Father:</span> {partner.fatherName}
+                      </p>
+                      <p>
+                        <span className="text-gray-400">Bike:</span> {partner.bikeNo}
+                      </p>
+                      <p className="sm:col-span-2">
+                        <span className="text-gray-400">Address:</span> {partner.address}
+                      </p>
+                    </div>
+
+                    <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                      {["aadhar", "dl", "rc", "insurance"].map((doc) => (
+                        <div
+                          key={doc}
+                          className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                        >
+                          <span className="text-xs uppercase tracking-[0.18em] text-gray-300">
+                            {doc}
+                          </span>
+                          {partner[doc] ? (
+                            <a
+                              href={api.asset(partner[doc].path)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-yellow-300"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Open
+                            </a>
+                          ) : (
+                            <span className="text-xs text-gray-500">Missing</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      {partner.bikeImages?.length ? (
+                        partner.bikeImages.map((img, index) => (
+                          <img
+                            key={`${partner._id}-${index}`}
+                            src={api.asset(img.path)}
+                            alt={`Bike ${index + 1}`}
+                            className="h-28 w-full rounded-2xl object-cover"
+                          />
+                        ))
+                      ) : (
+                        <div className="col-span-2 rounded-2xl border border-dashed border-white/10 p-4 text-center text-sm text-gray-500">
+                          No bike images uploaded
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => updateStatus(partner._id, "approved")}
+                        disabled={partner.status !== "pending" || updatingId === partner._id}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-green-500 px-4 py-3 font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStatus(partner._id, "rejected")}
+                        disabled={partner.status !== "pending" || updatingId === partner._id}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 px-4 py-3 font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Reject
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="rounded-[28px] border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-gray-400 xl:col-span-2">
+                  No partner applications found yet.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-8 rounded-[28px] border border-white/10 bg-black/20 p-5">
+              {bookings.length ? (
+                <div className="space-y-4">
+                  {bookings.map((booking) => (
+                    <div
+                      key={booking._id}
+                      className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                    >
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                          <p className="font-semibold text-white">{booking.user?.name}</p>
+                          <p className="mt-1 text-sm text-gray-400">{booking.user?.email}</p>
+                          <p className="mt-3 text-sm text-gray-300">
+                            {booking.pickup} to {booking.destination}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 lg:items-end">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${badgeClass(
+                              booking.status
+                            )}`}
+                          >
+                            {booking.status}
+                          </span>
+                          <p className="text-xs text-gray-400 capitalize">
+                            {booking.vehicle} | {formatDate(booking.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-gray-400">
+                  No bookings available right now.
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
       </div>
     </div>
   );

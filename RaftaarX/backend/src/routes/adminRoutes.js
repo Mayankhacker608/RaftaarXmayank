@@ -24,18 +24,41 @@ router.patch(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      const { status } = req.body;
+      const { status, videoKycStatus } = req.body;
+      const update = {};
 
-      if (!["approved", "rejected"].includes(status)) {
+      if (status) {
+        if (!["approved", "rejected"].includes(status)) {
+          return next({
+            statusCode: 400,
+            message: "Status must be approved or rejected",
+          });
+        }
+
+        update.status = status;
+      }
+
+      if (videoKycStatus) {
+        if (!["pending", "verified"].includes(videoKycStatus)) {
+          return next({
+            statusCode: 400,
+            message: "Video KYC status must be pending or verified",
+          });
+        }
+
+        update.videoKycStatus = videoKycStatus;
+      }
+
+      if (!Object.keys(update).length) {
         return next({
           statusCode: 400,
-          message: "Status must be approved or rejected",
+          message: "Status or video KYC update is required",
         });
       }
 
       const partner = await PartnerApplication.findByIdAndUpdate(
         req.params.id,
-        { status },
+        update,
         { new: true }
       ).populate("user", "name email role");
 
@@ -57,6 +80,7 @@ router.get("/bookings", protect, authorize("admin"), async (_req, res, next) => 
   try {
     const bookings = await Booking.find()
       .populate("user", "name email")
+      .populate("partner", "name email role")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, bookings });

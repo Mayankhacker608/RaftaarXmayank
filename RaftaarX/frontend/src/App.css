@@ -1,5 +1,46 @@
 @import "tailwindcss";
 
+:root,
+body.theme-light {
+  --app-bg: #f6f7fb;
+  --app-bg-secondary: #eef1f5;
+  --app-surface: rgba(255, 255, 255, 0.92);
+  --app-surface-strong: #ffffff;
+  --app-surface-soft: rgba(255, 255, 255, 0.7);
+  --app-card-muted: rgba(241, 245, 249, 0.92);
+  --app-navbar: rgba(255, 255, 255, 0.86);
+  --app-border: rgba(15, 23, 42, 0.09);
+  --app-border-strong: rgba(245, 158, 11, 0.24);
+  --app-text: #111827;
+  --app-text-muted: #4b5563;
+  --app-text-soft: #6b7280;
+  --app-accent: #d97706;
+  --app-accent-soft: rgba(245, 158, 11, 0.14);
+  --app-success-soft: rgba(34, 197, 94, 0.14);
+  --app-danger-soft: rgba(239, 68, 68, 0.12);
+  --app-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+}
+
+body.theme-dark {
+  --app-bg: #020617;
+  --app-bg-secondary: #0f172a;
+  --app-surface: rgba(15, 23, 42, 0.86);
+  --app-surface-strong: rgba(2, 6, 23, 0.95);
+  --app-surface-soft: rgba(17, 24, 39, 0.74);
+  --app-card-muted: rgba(15, 23, 42, 0.9);
+  --app-navbar: rgba(2, 6, 23, 0.84);
+  --app-border: rgba(255, 255, 255, 0.08);
+  --app-border-strong: rgba(250, 204, 21, 0.22);
+  --app-text: #f8fafc;
+  --app-text-muted: #cbd5e1;
+  --app-text-soft: #94a3b8;
+  --app-accent: #f59e0b;
+  --app-accent-soft: rgba(245, 158, 11, 0.14);
+  --app-success-soft: rgba(34, 197, 94, 0.16);
+  --app-danger-soft: rgba(239, 68, 68, 0.16);
+  --app-shadow: 0 24px 60px rgba(2, 6, 23, 0.38);
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -8,9 +49,146 @@ body {
   margin: 0;
   min-width: 320px;
   overflow-x: hidden;
-  background: #030712;
+  background:
+    radial-gradient(circle at top left, rgba(245, 158, 11, 0.12), transparent 28%),
+    linear-gradient(180deg, var(--app-bg), var(--app-bg-secondary));
+  color: var(--app-text);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease;
+  font-family:
+    "Poppins",
+    "Segoe UI",
+    sans-serif;
 }
 
 #root {
   min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+.theme-page {
+  min-height: 100vh;
+  color: var(--app-text);
+  background:
+    radial-gradient(circle at top left, rgba(245, 158, 11, 0.12), transparent 28%),
+    linear-gradient(180deg, var(--app-bg), var(--app-bg-secondary));
+}
+
+.theme-page-soft {
+  min-height: 100vh;
+  color: var(--app-text);
+  background:
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.09), transparent 24%),
+    linear-gradient(180deg, var(--app-bg), var(--app-bg-secondary));
+}
+
+.theme-card {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
+  color: var(--app-text);
+}
+
+.theme-card-soft {
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+}
+
+.theme-card-muted {
+  background: var(--app-card-muted);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+}
+
+.theme-navbar {
+  background: var(--app-navbar);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow);
+}
+
+.theme-text-muted {
+  color: var(--app-text-muted);
+}
+
+.theme-text-soft {
+  color: var(--app-text-soft);
+}
+
+.theme-accent {
+  color: var(--app-accent);
+}
+
+.theme-border {
+  border-color: var(--app-border);
+}
+
+.theme-border-strong {
+  border-color: var(--app-border-strong);
+}
+
+.theme-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-soft);
+  color: var(--app-text);
+  outline: none;
+}
+
+.theme-input::placeholder {
+  color: var(--app-text-soft);
+}
+
+.theme-input:focus {
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+}
+
+.theme-primary-button {
+  background: linear-gradient(135deg, #facc15, #f59e0b);
+  color: #111827;
+}
+
+.theme-secondary-button {
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+}
+
+.theme-chip {
+  background: var(--app-accent-soft);
+  color: var(--app-accent);
+  border: 1px solid var(--app-border-strong);
+}
+
+.theme-progress-track {
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.theme-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #facc15, #f59e0b);
+}
+
+.theme-account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #facc15, #f59e0b);
+  color: #111827;
+  font-weight: 700;
 }

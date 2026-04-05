@@ -162,20 +162,20 @@ function Auth() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(250,204,21,0.18),_transparent_35%),linear-gradient(135deg,#050505,#111827,#000000)] px-4 py-8 text-white sm:px-6 sm:py-12 md:py-16">
+    <div className="theme-page overflow-x-hidden px-4 py-24 sm:px-6 sm:py-28 md:py-32">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-[32px] border border-yellow-500/20 bg-white/5 p-5 backdrop-blur sm:p-8"
+          className="theme-card rounded-[32px] p-5 backdrop-blur sm:p-8"
         >
-          <p className="text-sm uppercase tracking-[0.35em] text-yellow-400">
+          <p className="theme-accent text-sm uppercase tracking-[0.35em]">
             Fast Access
           </p>
           <h1 className="mt-4 text-3xl font-black leading-tight sm:text-4xl md:text-6xl">
             Login ya signup karke seedha apne dashboard tak pahunchiye.
           </h1>
-          <p className="mt-6 max-w-2xl text-base text-gray-300 sm:text-lg">
+          <p className="theme-text-muted mt-6 max-w-2xl text-base sm:text-lg">
             Book Now ke baad yahin role choose kijiye. Successful auth ke baad app
             direct user, partner, ya admin panel open karega. Admin signup security
             key ke saath protected hai, aur user/partner roles me Google sign-in
@@ -190,15 +190,15 @@ function Auth() {
                 onClick={() => setRole(value)}
                 className={`rounded-2xl border p-5 text-left transition ${
                   role === value
-                    ? "border-yellow-400 bg-yellow-400/10"
-                    : "border-white/10 bg-black/20 hover:border-yellow-500/40"
+                    ? "theme-chip"
+                    : "theme-card-soft hover:border-yellow-500/40"
                 }`}
               >
                 {React.createElement(icon, {
-                  className: "mb-4 h-8 w-8 text-yellow-400",
+                  className: "theme-accent mb-4 h-8 w-8",
                 })}
                 <p className="text-xl font-bold">{label}</p>
-                <p className="mt-2 text-sm text-gray-300">
+                <p className="theme-text-muted mt-2 text-sm">
                   {value === "user" && "Ride booking aur payment flow"}
                   {value === "partner" && "Document upload aur approval tracking"}
                   {value === "admin" && "Protected admin review dashboard"}
@@ -213,9 +213,9 @@ function Auth() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           onSubmit={handleSubmit}
-          className="rounded-[32px] border border-white/10 bg-gray-950/80 p-5 shadow-2xl sm:p-8"
+          className="theme-card rounded-[32px] p-5 sm:p-8"
         >
-          <div className="flex gap-2 rounded-full bg-white/5 p-2 sm:gap-3">
+          <div className="theme-card-soft flex gap-2 rounded-full p-2 sm:gap-3">
             {["login", "signup"].map((currentMode) => (
               <button
                 key={currentMode}
@@ -223,8 +223,8 @@ function Auth() {
                 onClick={() => setMode(currentMode)}
                 className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold capitalize transition ${
                   mode === currentMode
-                    ? "bg-yellow-400 text-black"
-                    : "text-gray-300"
+                    ? "theme-primary-button"
+                    : "theme-text-muted"
                 }`}
               >
                 {currentMode}
@@ -235,15 +235,15 @@ function Auth() {
           <div className="mt-8 space-y-5">
             {mode === "signup" && (
               <label className="block">
-                <span className="mb-2 block text-sm text-gray-300">Full name</span>
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <UserRound className="h-5 w-5 text-yellow-400" />
+                <span className="theme-text-muted mb-2 block text-sm">Full name</span>
+                <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                  <UserRound className="theme-accent h-5 w-5" />
                   <input
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Mayank Kumar"
-                    className="w-full bg-transparent outline-none"
+                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
                     required
                   />
                 </div>
@@ -251,32 +251,32 @@ function Auth() {
             )}
 
             <label className="block">
-              <span className="mb-2 block text-sm text-gray-300">Email</span>
-              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <Mail className="h-5 w-5 text-yellow-400" />
+              <span className="theme-text-muted mb-2 block text-sm">Email</span>
+              <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                <Mail className="theme-accent h-5 w-5" />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="you@example.com"
-                  className="w-full bg-transparent outline-none"
+                  className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
                   required
                 />
               </div>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm text-gray-300">Password</span>
-              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <LockKeyhole className="h-5 w-5 text-yellow-400" />
+              <span className="theme-text-muted mb-2 block text-sm">Password</span>
+              <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                <LockKeyhole className="theme-accent h-5 w-5" />
                 <input
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter password"
-                  className="w-full bg-transparent outline-none"
+                  className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
                   required
                 />
               </div>
@@ -284,18 +284,18 @@ function Auth() {
 
             {mode === "signup" && (
               <label className="block">
-                <span className="mb-2 block text-sm text-gray-300">
+                <span className="theme-text-muted mb-2 block text-sm">
                   Confirm password
                 </span>
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <LockKeyhole className="h-5 w-5 text-yellow-400" />
+                <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                  <LockKeyhole className="theme-accent h-5 w-5" />
                   <input
                     type="password"
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Re-enter password"
-                    className="w-full bg-transparent outline-none"
+                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
                     required
                   />
                 </div>
@@ -304,16 +304,16 @@ function Auth() {
 
             {mode === "signup" && role === "admin" && (
               <label className="block">
-                <span className="mb-2 block text-sm text-gray-300">Admin key</span>
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <KeyRound className="h-5 w-5 text-yellow-400" />
+                <span className="theme-text-muted mb-2 block text-sm">Admin key</span>
+                <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                  <KeyRound className="theme-accent h-5 w-5" />
                   <input
                     type="password"
                     name="adminKey"
                     value={formData.adminKey}
                     onChange={handleChange}
                     placeholder="Enter admin signup key"
-                    className="w-full bg-transparent outline-none"
+                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
                     required
                   />
                 </div>
@@ -322,11 +322,11 @@ function Auth() {
           </div>
 
           {role !== "admin" && googleClientId && (
-            <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="mb-3 text-sm text-gray-300">Quick access with Google</p>
+            <div className="theme-card-soft mt-6 overflow-hidden rounded-2xl p-4">
+              <p className="theme-text-muted mb-3 text-sm">Quick access with Google</p>
               <div ref={googleButtonRef} className="min-h-[44px] max-w-full overflow-hidden" />
               {googleLoading && (
-                <p className="mt-3 text-sm text-gray-400">Signing in with Google...</p>
+                <p className="theme-text-soft mt-3 text-sm">Signing in with Google...</p>
               )}
             </div>
           )}
@@ -340,7 +340,7 @@ function Auth() {
           <button
             type="submit"
             disabled={submitting}
-            className="mt-8 w-full rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 px-6 py-4 font-bold text-black transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
+            className="theme-primary-button mt-8 w-full rounded-2xl px-6 py-4 font-bold transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {submitting
               ? "Please wait..."

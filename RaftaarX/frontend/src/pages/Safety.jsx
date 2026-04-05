@@ -29,14 +29,14 @@ function Safety() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-b from-gray-900 to-black px-6 pt-28 text-white sm:px-8 md:px-20 md:pt-40"
+      className="theme-page px-6 pt-28 sm:px-8 md:px-20 md:pt-40"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7, ease: "easeOut" }}
     >
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-10">
         <motion.h1
-          className="text-center text-4xl font-bold text-yellow-400 md:text-5xl"
+          className="theme-accent text-center text-4xl font-bold md:text-5xl"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
@@ -45,7 +45,7 @@ function Safety() {
         </motion.h1>
 
         <motion.p
-          className="max-w-3xl text-center text-lg leading-relaxed text-gray-300 md:text-xl"
+          className="theme-text-muted max-w-3xl text-center text-lg leading-relaxed md:text-xl"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -58,7 +58,7 @@ function Safety() {
           {safetyTips.map((tip, index) => (
             <motion.div
               key={index}
-              className="flex h-full flex-col items-center rounded-2xl bg-gray-800/60 p-6 text-center shadow-lg backdrop-blur-md"
+              className="theme-card flex h-full flex-col items-center rounded-2xl p-6 text-center"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.2 * index }}
@@ -68,10 +68,10 @@ function Safety() {
                 alt={tip.title}
                 className="mb-4 h-48 w-full rounded-lg object-cover"
               />
-              <h2 className="mb-2 text-2xl font-semibold text-yellow-400">
+              <h2 className="theme-accent mb-2 text-2xl font-semibold">
                 {tip.title}
               </h2>
-              <p className="text-base text-gray-300">{tip.description}</p>
+              <p className="theme-text-muted text-base">{tip.description}</p>
             </motion.div>
           ))}
         </div>
