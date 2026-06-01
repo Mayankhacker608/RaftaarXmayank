@@ -3,12 +3,23 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Banknote,
+  BellRing,
   Bike,
+  CalendarClock,
   CheckCircle2,
+  CreditCard,
   FileText,
+  Flag,
   ImagePlus,
+  Info,
+  MapPin,
   Phone,
+  PlayCircle,
+  RefreshCw,
   ShieldCheck,
+  UserRound,
+  Wallet,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -24,12 +35,64 @@ const onboardingSteps = [
 ];
 
 const requiredDocs = ["aadhar", "dl", "rc", "insurance"];
+const maxBikeImages = 6;
 
 function formatDate(value) {
   return new Date(value).toLocaleString("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+const bookingStageMeta = {
+  finding_driver: {
+    label: "New request",
+    note: "User driver finding screen par wait kar raha hai.",
+  },
+  partner_assigned: {
+    label: "Accepted",
+    note: "User ko accept notification mil chuki hai. Pickup ke liye nikle.",
+  },
+  ride_in_progress: {
+    label: "Service running",
+    note: "Ride active hai. Complete hone par payment unlock karein.",
+  },
+  payment_pending: {
+    label: "Payment pending",
+    note: "User ke payment screen par payment enabled hai.",
+  },
+  paid: {
+    label: "Paid and complete",
+    note: "Payment receive ho gayi. Booking close ho chuki hai.",
+  },
+};
+
+function getBookingStageMeta(stage) {
+  return bookingStageMeta[stage] || bookingStageMeta.finding_driver;
+}
+
+function maskAccount(value) {
+  if (!value) {
+    return "Not added";
+  }
+
+  return `****${String(value).slice(-4)}`;
+}
+
+function statusClass(status) {
+  if (status === "approved" || status === "paid" || status === "completed") {
+    return "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-300";
+  }
+
+  if (status === "rejected") {
+    return "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300";
+  }
+
+  return "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200";
+}
+
+function isFilled(value) {
+  return Boolean(String(value || "").trim());
 }
 
 function Partner() {
@@ -63,6 +126,8 @@ function Partner() {
   const [acceptedBookings, setAcceptedBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [updatingBookingId, setUpdatingBookingId] = useState("");
+  const [requestDrawer, setRequestDrawer] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -88,8 +153,189 @@ function Partner() {
     fetchPartnerData();
   }, [fetchPartnerData]);
 
+  useEffect(() => {
+    if (applications.length) {
+      setCurrentStep(4);
+    }
+  }, [applications.length]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPartnerData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchPartnerData]);
+
   const latestApplication = applications[0] || null;
   const isApproved = latestApplication?.status === "approved";
+  const activeBookings = acceptedBookings.filter(
+    (booking) => !["payment_pending", "paid"].includes(booking.serviceStage)
+  );
+  const paymentBookings = acceptedBookings.filter((booking) =>
+    ["payment_pending", "paid"].includes(booking.serviceStage)
+  );
+  const totalEarnings = acceptedBookings
+    .filter((booking) => booking.serviceStage === "paid")
+    .reduce((sum, booking) => sum + Number(booking.estimatedFare || 0), 0);
+  const completedBookings = acceptedBookings.filter(
+    (booking) => booking.serviceStage === "paid"
+  );
+  const reviewGroups = useMemo(
+    () => [
+      {
+        title: "Personal details",
+        note: "Partner ki identity aur contact verification ke liye.",
+        items: [
+          {
+            label: "Full name",
+            value: formData.name,
+            valid: isFilled(formData.name),
+            hint: "Name required hai.",
+          },
+          {
+            label: "Father name",
+            value: formData.fatherName,
+            valid: isFilled(formData.fatherName),
+            hint: "Father name required hai.",
+          },
+          {
+            label: "Phone number",
+            value: formData.phoneNumber,
+            valid: String(formData.phoneNumber || "").trim().length >= 10,
+            hint: "10 digit phone number add karein.",
+          },
+          {
+            label: "Address",
+            value: formData.address,
+            valid: isFilled(formData.address),
+            hint: "Full address required hai.",
+          },
+        ],
+      },
+      {
+        title: "Vehicle details",
+        note: "Customer ko ride accept hone ke baad vehicle confidence milega.",
+        items: [
+          {
+            label: "Vehicle brand",
+            value: formData.vehicleBrand,
+            valid: isFilled(formData.vehicleBrand),
+            hint: "Brand add karein.",
+          },
+          {
+            label: "Vehicle model",
+            value: formData.vehicleModel,
+            valid: isFilled(formData.vehicleModel),
+            hint: "Model add karein.",
+          },
+          {
+            label: "Vehicle color",
+            value: formData.vehicleColor,
+            valid: isFilled(formData.vehicleColor),
+            hint: "Color add karein.",
+          },
+          {
+            label: "Vehicle number",
+            value: formData.bikeNo,
+            valid: isFilled(formData.bikeNo),
+            hint: "Registration number add karein.",
+          },
+        ],
+      },
+      {
+        title: "Documents",
+        note: "Admin approval ke liye documents complete hone chahiye.",
+        items: [
+          {
+            label: "Aadhar",
+            value: formData.aadhar?.name,
+            valid: Boolean(formData.aadhar),
+            hint: "Aadhar upload karein.",
+          },
+          {
+            label: "Driving license",
+            value: formData.dl?.name,
+            valid: Boolean(formData.dl),
+            hint: "DL upload karein.",
+          },
+          {
+            label: "RC",
+            value: formData.rc?.name,
+            valid: Boolean(formData.rc),
+            hint: "RC upload karein.",
+          },
+          {
+            label: "Insurance",
+            value: formData.insurance?.name,
+            valid: Boolean(formData.insurance),
+            hint: "Insurance upload karein.",
+          },
+          {
+            label: "Bike photos",
+            value: `${formData.bikeImages.length} selected`,
+            valid:
+              formData.bikeImages.length >= 2 &&
+              formData.bikeImages.length <= maxBikeImages,
+            hint: `At least 2 aur maximum ${maxBikeImages} bike photos upload karein.`,
+          },
+        ],
+      },
+      {
+        title: "Bank and pricing",
+        note: "Payment settlement aur earning estimate ke liye.",
+        optional: true,
+        items: [
+          {
+            label: "Bank name",
+            value: formData.bankName,
+            valid: isFilled(formData.bankName),
+            hint: "Recommended for payout.",
+            optional: true,
+          },
+          {
+            label: "Account holder",
+            value: formData.accountHolderName,
+            valid: isFilled(formData.accountHolderName),
+            hint: "Recommended for payout.",
+            optional: true,
+          },
+          {
+            label: "Account number",
+            value: maskAccount(formData.accountNumber),
+            valid: isFilled(formData.accountNumber),
+            hint: "Recommended for payout.",
+            optional: true,
+          },
+          {
+            label: "IFSC code",
+            value: formData.ifscCode,
+            valid: isFilled(formData.ifscCode),
+            hint: "Recommended for payout.",
+            optional: true,
+          },
+          {
+            label: "Pricing plan",
+            value: formData.pricingPlan,
+            valid: isFilled(formData.pricingPlan),
+            hint: "Pricing plan selected rahe.",
+          },
+          {
+            label: "Price per km",
+            value: `Rs. ${formData.pricePerKm || 0}`,
+            valid: Number(formData.pricePerKm) > 0,
+            hint: "Valid price per km add karein.",
+          },
+        ],
+      },
+    ],
+    [formData]
+  );
+  const requiredReviewItems = reviewGroups.flatMap((group) =>
+    group.items.filter((item) => !item.optional)
+  );
+  const completedRequiredCount = requiredReviewItems.filter((item) => item.valid).length;
+  const reviewReady = completedRequiredCount === requiredReviewItems.length;
 
   const progressPercent = useMemo(() => {
     if (currentStep === 4) {
@@ -104,10 +350,18 @@ function Partner() {
 
     if (files) {
       if (name === "bikeImages") {
+        const selectedImages = Array.from(files).slice(0, maxBikeImages);
+
         setFormData((previous) => ({
           ...previous,
-          bikeImages: Array.from(files),
+          bikeImages: selectedImages,
         }));
+
+        if (files.length > maxBikeImages) {
+          setError(`Maximum ${maxBikeImages} bike images upload kar sakte hain.`);
+        } else {
+          setError("");
+        }
         return;
       }
 
@@ -128,21 +382,7 @@ function Partner() {
   const previousStep = () => setCurrentStep((previous) => Math.max(previous - 1, 0));
 
   const handleSubmit = async () => {
-    if (
-      !formData.name ||
-      !formData.fatherName ||
-      !formData.address ||
-      !formData.phoneNumber ||
-      !formData.vehicleBrand ||
-      !formData.vehicleModel ||
-      !formData.vehicleColor ||
-      !formData.bikeNo ||
-      !formData.aadhar ||
-      !formData.dl ||
-      !formData.rc ||
-      !formData.insurance ||
-      formData.bikeImages.length < 2
-    ) {
+    if (!reviewReady) {
       setError("Partner onboarding complete karne ke liye sab required fields bhariye.");
       return;
     }
@@ -179,14 +419,440 @@ function Partner() {
 
   const acceptBooking = async (bookingId) => {
     try {
+      setUpdatingBookingId(bookingId);
+      setError("");
+      setMessage("");
       const response = await api.patch(`/bookings/${bookingId}/accept`, {}, token);
       setAcceptedBookings((previous) => [response.booking, ...previous]);
       setAvailableBookings((previous) =>
         previous.filter((booking) => booking._id !== bookingId)
       );
+      setMessage("Booking accepted. User ko partner assigned notification mil gayi.");
+      fetchPartnerData();
     } catch (acceptError) {
       setError(acceptError.message);
+    } finally {
+      setUpdatingBookingId("");
     }
+  };
+
+  const updateBookingStage = async (bookingId, serviceStage) => {
+    try {
+      setUpdatingBookingId(bookingId);
+      setError("");
+      setMessage("");
+      const response = await api.patch(
+        `/bookings/${bookingId}/stage`,
+        {
+          serviceStage,
+          status: serviceStage === "payment_pending" ? "confirmed" : undefined,
+        },
+        token
+      );
+
+      setAcceptedBookings((previous) =>
+        previous.map((booking) =>
+          booking._id === bookingId ? response.booking : booking
+        )
+      );
+      setMessage(
+        serviceStage === "ride_in_progress"
+          ? "Service running mark ho gayi. User tracking screen update ho gayi."
+          : "Service complete mark ho gayi. User ke liye payment unlock ho gaya."
+      );
+      fetchPartnerData();
+    } catch (stageError) {
+      setError(stageError.message);
+    } finally {
+      setUpdatingBookingId("");
+    }
+  };
+
+  const renderBookingActions = (booking) => {
+    const busy = updatingBookingId === booking._id;
+
+    if (booking.serviceStage === "partner_assigned") {
+      return (
+        <button
+          type="button"
+          onClick={() => updateBookingStage(booking._id, "ride_in_progress")}
+          disabled={busy}
+          className="theme-primary-button mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-70"
+        >
+          <PlayCircle className="h-4 w-4" />
+          {busy ? "Starting..." : "Start service"}
+        </button>
+      );
+    }
+
+    if (booking.serviceStage === "ride_in_progress") {
+      return (
+        <button
+          type="button"
+          onClick={() => updateBookingStage(booking._id, "payment_pending")}
+          disabled={busy}
+          className="theme-primary-button mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-70"
+        >
+          <Flag className="h-4 w-4" />
+          {busy ? "Completing..." : "Complete service"}
+        </button>
+      );
+    }
+
+    if (booking.serviceStage === "payment_pending") {
+      return (
+        <p className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-200">
+          Payment pending hai. User payment confirm karega to booking complete ho jayegi.
+        </p>
+      );
+    }
+
+    if (booking.serviceStage === "paid") {
+      return (
+        <p className="mt-4 inline-flex items-center gap-2 rounded-xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
+          <CheckCircle2 className="h-4 w-4" />
+          Payment completed
+        </p>
+      );
+    }
+
+    return null;
+  };
+
+  const renderApplicationSummary = () => {
+    if (!latestApplication) {
+      return null;
+    }
+
+    const infoCards = [
+      { label: "Partner name", value: latestApplication.name, icon: UserRound },
+      { label: "Phone", value: latestApplication.phoneNumber || "Not added", icon: Phone },
+      {
+        label: "Vehicle",
+        value: `${latestApplication.vehicleBrand || ""} ${
+          latestApplication.vehicleModel || ""
+        }`.trim() || latestApplication.vehicleType || "Vehicle added",
+        icon: Bike,
+      },
+      { label: "Vehicle no.", value: latestApplication.bikeNo, icon: ShieldCheck },
+      { label: "Address", value: latestApplication.address, icon: MapPin },
+      {
+        label: "Bank",
+        value: `${latestApplication.bankName || "Bank"} | ${maskAccount(
+          latestApplication.accountNumber
+        )}`,
+        icon: Wallet,
+      },
+    ];
+
+    return (
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="theme-card-soft rounded-[28px] p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="theme-accent text-xs font-semibold uppercase tracking-[0.25em]">
+                Submitted Profile
+              </p>
+              <h3 className="mt-2 text-2xl font-black">{latestApplication.name}</h3>
+              <p className="theme-text-muted mt-2 text-sm">
+                Ye wahi data hai jo partner onboarding me fill hua tha.
+              </p>
+            </div>
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase ${statusClass(
+                latestApplication.status
+              )}`}
+            >
+              {latestApplication.status}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {infoCards.map(({ label, value, icon: Icon }) => (
+              <div key={label} className="theme-card rounded-2xl p-4">
+                <Icon className="theme-accent h-5 w-5" />
+                <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+                  {label}
+                </p>
+                <p className="mt-2 text-sm font-semibold">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="theme-card-soft rounded-[28px] p-5">
+          <div className="flex items-center gap-3">
+            <FileText className="theme-accent h-5 w-5" />
+            <h3 className="text-xl font-semibold">Admin review package</h3>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {requiredDocs.map((doc) => (
+              <div key={doc} className="theme-card flex items-center justify-between rounded-2xl p-4">
+                <span className="text-sm font-semibold uppercase">{doc}</span>
+                <span className={latestApplication[doc] ? "text-green-600" : "theme-text-soft"}>
+                  {latestApplication[doc] ? "Uploaded" : "Missing"}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {latestApplication.bikeImages?.length ? (
+              latestApplication.bikeImages.slice(0, 4).map((image, index) => (
+                <img
+                  key={`${latestApplication._id}-${index}`}
+                  src={api.asset(image.path)}
+                  alt={`Partner vehicle ${index + 1}`}
+                  className="h-28 w-full rounded-2xl object-cover"
+                />
+              ))
+            ) : (
+              <div className="col-span-2 rounded-2xl border border-dashed border-[var(--app-border)] p-4 text-center text-sm">
+                Vehicle photos missing
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderIncomingRequestCard = (booking) => {
+    const busy = updatingBookingId === booking._id;
+
+    return (
+      <div key={booking._id} className="theme-card rounded-2xl p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="theme-chip rounded-full px-3 py-1 text-xs font-semibold">
+                New ride request
+              </span>
+              <span className="theme-text-soft text-xs">
+                Requested {formatDate(booking.createdAt)}
+              </span>
+            </div>
+            <h4 className="mt-3 text-lg font-black">
+              {booking.pickup} to {booking.destination}
+            </h4>
+            <p className="theme-text-muted mt-2 text-sm">
+              Customer request accept karne se user ko partner assigned status turant dikhega.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => acceptBooking(booking._id)}
+            disabled={busy}
+            className="theme-primary-button inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {busy ? "Accepting..." : "Accept request"}
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="theme-card-soft rounded-2xl p-4">
+            <UserRound className="theme-accent h-5 w-5" />
+            <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+              Customer
+            </p>
+            <p className="mt-2 text-sm font-semibold">{booking.user?.name || "User"}</p>
+            <p className="theme-text-soft mt-1 text-xs">{booking.user?.email || "No email"}</p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-4">
+            <Phone className="theme-accent h-5 w-5" />
+            <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+              Contact
+            </p>
+            <p className="mt-2 text-sm font-semibold">
+              {booking.mobileNumber || "Not added"}
+            </p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-4">
+            <Bike className="theme-accent h-5 w-5" />
+            <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+              Service
+            </p>
+            <p className="mt-2 text-sm font-semibold capitalize">{booking.vehicle}</p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-4">
+            <Banknote className="theme-accent h-5 w-5" />
+            <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+              Fare
+            </p>
+            <p className="mt-2 text-sm font-semibold">Rs. {booking.estimatedFare || 0}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="theme-card-soft rounded-2xl p-4">
+            <MapPin className="h-5 w-5 text-green-600" />
+            <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+              Pickup details
+            </p>
+            <p className="mt-2 text-sm font-semibold">{booking.pickup}</p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-4">
+            <MapPin className="h-5 w-5 text-red-600" />
+            <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+              Drop details
+            </p>
+            <p className="mt-2 text-sm font-semibold">{booking.destination}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRideCard = (booking) => {
+    const stage = getBookingStageMeta(booking.serviceStage);
+
+    return (
+      <div key={booking._id} className="theme-card rounded-2xl p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="font-semibold">{booking.pickup} to {booking.destination}</p>
+            <p className="theme-text-soft mt-1 text-sm">
+              {booking.user?.name} | {booking.user?.email || "No email"} | Rs.{" "}
+              {booking.estimatedFare || 0}
+            </p>
+            <p className="theme-text-soft mt-1 text-sm">
+              Contact: {booking.mobileNumber || "Not added"} | Vehicle: {booking.vehicle}
+            </p>
+          </div>
+          <span className="theme-chip rounded-full px-3 py-1 text-xs font-semibold">
+            {stage.label}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="theme-card-soft rounded-2xl p-3">
+            <MapPin className="h-4 w-4 text-green-600" />
+            <p className="theme-text-soft mt-2 text-xs">Pickup</p>
+            <p className="mt-1 text-sm font-semibold">{booking.pickup}</p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-3">
+            <MapPin className="h-4 w-4 text-red-600" />
+            <p className="theme-text-soft mt-2 text-xs">Drop</p>
+            <p className="mt-1 text-sm font-semibold">{booking.destination}</p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-3">
+            <CalendarClock className="theme-accent h-4 w-4" />
+            <p className="theme-text-soft mt-2 text-xs">Requested</p>
+            <p className="mt-1 text-sm font-semibold">{formatDate(booking.createdAt)}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="theme-card-soft rounded-2xl p-3">
+            <Phone className="theme-accent h-4 w-4" />
+            <p className="theme-text-soft mt-2 text-xs">User contact</p>
+            <p className="mt-1 text-sm font-semibold">{booking.mobileNumber || "Not added"}</p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-3">
+            <CreditCard className="theme-accent h-4 w-4" />
+            <p className="theme-text-soft mt-2 text-xs">Payment status</p>
+            <p className="mt-1 text-sm font-semibold capitalize">
+              {booking.serviceStage === "paid"
+                ? `Paid${booking.paymentMethod ? ` by ${booking.paymentMethod}` : ""}`
+                : booking.serviceStage === "payment_pending"
+                  ? "Waiting for user"
+                  : "Locked"}
+            </p>
+          </div>
+          <div className="theme-card-soft rounded-2xl p-3">
+            <Banknote className="theme-accent h-4 w-4" />
+            <p className="theme-text-soft mt-2 text-xs">Partner earning</p>
+            <p className="mt-1 text-sm font-semibold">
+              {booking.serviceStage === "paid" ? `Rs. ${booking.estimatedFare || 0}` : "After payment"}
+            </p>
+          </div>
+        </div>
+
+        <p className="theme-text-soft mt-4 text-sm">{stage.note}</p>
+        {renderBookingActions(booking)}
+      </div>
+    );
+  };
+
+  const drawerConfig = {
+    requests: {
+      title: "All live requests",
+      subtitle: "Partner ke paas aayi saari open ride requests yahan dikhenge.",
+      bookings: availableBookings,
+      empty: "Abhi koi live request available nahi hai.",
+      render: renderIncomingRequestCard,
+    },
+    active: {
+      title: "Active ride requests",
+      subtitle: "Accepted aur running rides jinka payment abhi complete nahi hua.",
+      bookings: activeBookings,
+      empty: "Abhi koi active ride nahi hai.",
+      render: renderRideCard,
+    },
+    payments: {
+      title: "Complete and payment requests",
+      subtitle: "Payment pending aur paid rides ka complete workflow yahan dikhega.",
+      bookings: paymentBookings,
+      empty: "Abhi koi completed/payment request nahi hai.",
+      render: renderRideCard,
+    },
+    earnings: {
+      title: "Paid completed requests",
+      subtitle: "Jinki payment complete ho chuki hai unki earning details.",
+      bookings: completedBookings,
+      empty: "Abhi koi paid completed request nahi hai.",
+      render: renderRideCard,
+    },
+  };
+
+  const renderRequestDrawer = () => {
+    const activeDrawer = drawerConfig[requestDrawer];
+
+    if (!activeDrawer) {
+      return null;
+    }
+
+    return (
+      <div className="fixed inset-0 z-50">
+        <button
+          type="button"
+          aria-label="Close requests drawer"
+          onClick={() => setRequestDrawer(null)}
+          className="absolute inset-0 bg-black/50"
+        />
+        <aside className="theme-page absolute right-0 top-0 flex h-full w-full max-w-2xl flex-col border-l border-[var(--app-border)] shadow-2xl">
+          <div className="theme-card flex items-start justify-between gap-4 rounded-none border-x-0 border-t-0 p-5">
+            <div>
+              <p className="theme-accent text-xs font-semibold uppercase tracking-[0.25em]">
+                Partner Requests
+              </p>
+              <h3 className="mt-2 text-2xl font-black">{activeDrawer.title}</h3>
+              <p className="theme-text-muted mt-2 text-sm">{activeDrawer.subtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRequestDrawer(null)}
+              className="theme-secondary-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+            {activeDrawer.bookings.length ? (
+              <div className="space-y-4">
+                {activeDrawer.bookings.map((booking) => activeDrawer.render(booking))}
+              </div>
+            ) : (
+              <div className="theme-card-soft rounded-[28px] p-6 text-center text-sm">
+                {activeDrawer.empty}
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
+    );
   };
 
   const renderStepContent = () => {
@@ -256,6 +922,9 @@ function Partner() {
               Bike Images
             </span>
             <input type="file" name="bikeImages" multiple onChange={handleChange} accept="image/*" className="w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-yellow-400 file:px-4 file:py-2 file:font-semibold file:text-black" />
+            <p className="theme-text-soft mt-3 text-xs">
+              Minimum 2 aur maximum {maxBikeImages} bike images upload karein.
+            </p>
             <div className="mt-4 flex flex-wrap gap-3">
               {formData.bikeImages.map((image, index) => (
                 <div key={`${image.name}-${index}`} className="overflow-hidden rounded-2xl border border-[var(--app-border)]">
@@ -308,26 +977,158 @@ function Partner() {
 
     if (currentStep === 3) {
       return (
-        <div className="theme-card-soft rounded-[28px] p-5">
-          <h3 className="text-xl font-semibold">Final review</h3>
-          <div className="theme-text-muted mt-4 grid gap-3 text-sm md:grid-cols-2">
-            <p>Name: {formData.name}</p>
-            <p>Phone: {formData.phoneNumber}</p>
-            <p>Vehicle: {formData.vehicleBrand} {formData.vehicleModel}</p>
-            <p>Vehicle No: {formData.bikeNo}</p>
-            <p>Bank: {formData.bankName}</p>
-            <p>Price per km: Rs. {formData.pricePerKm}</p>
+        <div className="space-y-5">
+          <div className="theme-card-soft rounded-[28px] p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="theme-accent text-xs font-semibold uppercase tracking-[0.25em]">
+                  Final Verification
+                </p>
+                <h3 className="mt-2 text-2xl font-black">Check every partner detail</h3>
+                <p className="theme-text-muted mt-2 text-sm">
+                  Green tick ka matlab detail complete hai. Yellow warning ka matlab submit
+                  se pehle correction chahiye.
+                </p>
+              </div>
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+                  reviewReady
+                    ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-300"
+                    : "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200"
+                }`}
+              >
+                {completedRequiredCount}/{requiredReviewItems.length} required complete
+              </div>
+            </div>
           </div>
-        </div>
+
+          <div className="grid gap-5 xl:grid-cols-2">
+            {reviewGroups.map((group) => {
+              const completeCount = group.items.filter((item) => item.valid).length;
+
+              return (
+                <div key={group.title} className="theme-card-soft rounded-[28px] p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-lg font-black">{group.title}</h4>
+                      <p className="theme-text-muted mt-1 text-sm">{group.note}</p>
+                    </div>
+                    <span className="theme-chip rounded-full px-3 py-1 text-xs font-semibold">
+                      {completeCount}/{group.items.length}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {group.items.map((item) => (
+                      <div
+                        key={`${group.title}-${item.label}`}
+                        className={`rounded-2xl border p-4 ${
+                          item.valid
+                            ? "border-green-500/20 bg-green-500/10"
+                            : "border-yellow-500/20 bg-yellow-500/10"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {item.valid ? (
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                          ) : (
+                            <Info className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold">{item.label}</p>
+                              {item.optional ? (
+                                <span className="theme-text-soft text-xs">Optional</span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 break-words text-sm">
+                              {item.valid ? item.value || "Added" : item.hint}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {!reviewReady ? (
+            <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-200">
+              Missing details ko previous steps me jaakar complete kijiye, phir submit active
+              flow me approve ke liye jayega.
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
+              Required partner details complete hain. Ab admin review ke liye submit kar sakte hain.
+            </div>
+          )}
+          </div>
       );
     }
 
     return (
       <div className="space-y-6">
+        {renderApplicationSummary()}
+
+        <div className="grid gap-4 md:grid-cols-4">
+          {[
+            {
+              label: "New Requests",
+              value: availableBookings.length,
+              icon: BellRing,
+              drawer: "requests",
+            },
+            {
+              label: "Active Rides",
+              value: activeBookings.length,
+              icon: PlayCircle,
+              drawer: "active",
+            },
+            {
+              label: "Complete Requests",
+              value: paymentBookings.length,
+              icon: CreditCard,
+              drawer: "payments",
+            },
+            {
+              label: "Earnings",
+              value: `Rs. ${totalEarnings}`,
+              icon: Banknote,
+              drawer: "earnings",
+            },
+          ].map(({ label, value, icon: Icon, drawer }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setRequestDrawer(drawer)}
+              className="theme-card-soft rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:border-yellow-500/40"
+            >
+              <Icon className="theme-accent h-5 w-5" />
+              <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
+                {label}
+              </p>
+              <p className="mt-2 text-2xl font-black">{value}</p>
+              <p className="theme-text-soft mt-2 text-xs">Click to view all</p>
+            </button>
+          ))}
+        </div>
+
         <div className="theme-card-soft rounded-[28px] p-5">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="theme-accent h-5 w-5" />
-            <h3 className="text-xl font-semibold">Live Bookings</h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="theme-accent h-5 w-5" />
+              <h3 className="text-xl font-semibold">Live Bookings</h3>
+            </div>
+            <button
+              type="button"
+              onClick={fetchPartnerData}
+              className="theme-secondary-button inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </button>
           </div>
 
           {!isApproved ? (
@@ -336,23 +1137,11 @@ function Partner() {
             </p>
           ) : availableBookings.length ? (
             <div className="mt-4 space-y-4">
-              {availableBookings.map((booking) => (
-                <div key={booking._id} className="theme-card rounded-2xl p-4">
-                  <p className="font-semibold">
-                    {booking.pickup} to {booking.destination}
-                  </p>
-                  <p className="theme-text-soft mt-1 text-sm">
-                    {booking.user?.name} | {booking.vehicle} | Rs. {booking.estimatedFare || 0}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => acceptBooking(booking._id)}
-                    className="theme-primary-button mt-4 rounded-xl px-4 py-2 text-sm font-semibold"
-                  >
-                    Accept booking
-                  </button>
-                </div>
-              ))}
+              <div className="rounded-2xl border border-yellow-500/25 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-100">
+                <BellRing className="mr-2 inline h-4 w-4" />
+                {availableBookings.length} new booking request partner panel me aayi hai.
+              </div>
+              {availableBookings.map((booking) => renderIncomingRequestCard(booking))}
             </div>
           ) : (
             <p className="theme-text-soft mt-4 text-sm">No open bookings right now.</p>
@@ -366,14 +1155,7 @@ function Partner() {
           </div>
           {acceptedBookings.length ? (
             <div className="mt-4 space-y-4">
-              {acceptedBookings.map((booking) => (
-                <div key={booking._id} className="theme-card rounded-2xl p-4">
-                  <p className="font-semibold">{booking.pickup} to {booking.destination}</p>
-                  <p className="theme-text-soft mt-1 text-sm">
-                    {booking.user?.name} | {formatDate(booking.createdAt)}
-                  </p>
-                </div>
-              ))}
+              {acceptedBookings.map((booking) => renderRideCard(booking))}
             </div>
           ) : (
             <p className="theme-text-soft mt-4 text-sm">No accepted bookings yet.</p>
@@ -467,10 +1249,14 @@ function Partner() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={submitting}
+                  disabled={submitting || !reviewReady}
                   className="theme-primary-button rounded-2xl px-5 py-3 font-semibold disabled:opacity-70"
                 >
-                  {submitting ? "Submitting..." : "Submit for admin review"}
+                  {submitting
+                    ? "Submitting..."
+                    : reviewReady
+                      ? "Submit for admin review"
+                      : "Complete missing details"}
                 </button>
               ) : (
                 <button
@@ -485,6 +1271,7 @@ function Partner() {
           )}
         </div>
       </div>
+      {renderRequestDrawer()}
     </div>
   );
 }

@@ -3,8 +3,10 @@ import { motion } from "framer-motion";
 import {
   Bike,
   CheckCircle2,
+  CreditCard,
   Eye,
   LayoutDashboard,
+  RefreshCw,
   ShieldCheck,
   UserRoundCheck,
   XCircle,
@@ -36,6 +38,30 @@ function badgeClass(status) {
   return "bg-yellow-500/15 text-yellow-300";
 }
 
+function stageClass(stage) {
+  if (stage === "paid") {
+    return "bg-green-500/15 text-green-300";
+  }
+
+  if (stage === "payment_pending") {
+    return "bg-yellow-500/15 text-yellow-200";
+  }
+
+  if (stage === "ride_in_progress") {
+    return "bg-blue-500/15 text-blue-300";
+  }
+
+  if (stage === "partner_assigned") {
+    return "bg-cyan-500/15 text-cyan-300";
+  }
+
+  return "bg-white/10 text-gray-300";
+}
+
+function stageLabel(stage) {
+  return (stage || "finding_driver").replaceAll("_", " ");
+}
+
 function Admin() {
   const { token, user } = useAuth();
   const [partners, setPartners] = useState([]);
@@ -47,6 +73,7 @@ function Admin() {
 
   const loadDashboard = useCallback(async () => {
     try {
+      setError("");
       const [partnersResponse, bookingsResponse] = await Promise.all([
         api.get("/admin/partners", token),
         api.get("/admin/bookings", token),
@@ -63,6 +90,14 @@ function Admin() {
 
   useEffect(() => {
     loadDashboard();
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadDashboard();
+    }, 7000);
+
+    return () => clearInterval(interval);
   }, [loadDashboard]);
 
   const dashboardStats = useMemo(
@@ -87,8 +122,13 @@ function Admin() {
         value: bookings.length,
         icon: Bike,
       },
+      {
+        label: "Completed Payments",
+        value: bookings.filter((booking) => booking.serviceStage === "paid").length,
+        icon: CreditCard,
+      },
     ],
-    [bookings.length, partners]
+    [bookings, partners]
   );
 
   const updateStatus = async (id, status) => {
@@ -151,7 +191,7 @@ function Admin() {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {dashboardStats.map((item) => (
               <div
                 key={item.label}
@@ -164,24 +204,34 @@ function Admin() {
             ))}
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            {[
-              { label: "Partner Applications", value: "partners" },
-              { label: "Recent Bookings", value: "bookings" },
-            ].map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => setActiveTab(tab.value)}
-                className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
-                  activeTab === tab.value
-                    ? "bg-yellow-400 text-black"
-                    : "border border-white/10 bg-white/5 text-gray-300"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-3">
+              {[
+                { label: "Partner Applications", value: "partners" },
+                { label: "Recent Bookings", value: "bookings" },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setActiveTab(tab.value)}
+                  className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
+                    activeTab === tab.value
+                      ? "bg-yellow-400 text-black"
+                      : "border border-white/10 bg-white/5 text-gray-300"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={loadDashboard}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-gray-200"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </button>
           </div>
 
           {activeTab === "partners" ? (
@@ -309,17 +359,38 @@ function Admin() {
                           <p className="mt-3 text-sm text-gray-300">
                             {booking.pickup} to {booking.destination}
                           </p>
+                          <p className="mt-2 text-sm text-gray-400">
+                            Partner: {booking.partner?.name || "Not accepted yet"} | Fare: Rs.{" "}
+                            {booking.estimatedFare || 0}
+                          </p>
                         </div>
                         <div className="flex flex-col gap-2 lg:items-end">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${badgeClass(
-                              booking.status
-                            )}`}
-                          >
-                            {booking.status}
-                          </span>
+                          <div className="flex flex-wrap gap-2 lg:justify-end">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${badgeClass(
+                                booking.status
+                              )}`}
+                            >
+                              {booking.status}
+                            </span>
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${stageClass(
+                                booking.serviceStage
+                              )}`}
+                            >
+                              {stageLabel(booking.serviceStage)}
+                            </span>
+                          </div>
                           <p className="text-xs text-gray-400 capitalize">
                             {booking.vehicle} | {formatDate(booking.createdAt)}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            Payment:{" "}
+                            {booking.paymentMethod
+                              ? booking.paymentMethod.toUpperCase()
+                              : booking.serviceStage === "payment_pending"
+                                ? "Pending from user"
+                                : "Not unlocked"}
                           </p>
                         </div>
                       </div>

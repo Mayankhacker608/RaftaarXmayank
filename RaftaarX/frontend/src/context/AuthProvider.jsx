@@ -64,14 +64,18 @@ export function AuthProvider({ children }) {
 
   const signup = async (payload) => {
     const response = await api.post("/auth/signup", payload);
-    persistAuth(response);
-    return response.user;
+    if (response.token) {
+      persistAuth(response);
+    }
+    return response;
   };
 
   const login = async (payload) => {
     const response = await api.post("/auth/login", payload);
-    persistAuth(response);
-    return response.user;
+    if (response.token) {
+      persistAuth(response);
+    }
+    return response;
   };
 
   const logout = () => {

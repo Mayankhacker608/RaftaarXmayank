@@ -6,6 +6,19 @@ import PartnerApplication from "../models/PartnerApplication.js";
 
 const router = express.Router();
 
+const partnerStages = ["ride_in_progress", "payment_pending"];
+const userStages = ["paid"];
+
+function populateBooking(query) {
+  return query.populate("user", "name email").populate("partner", "name email");
+}
+
+async function populateBookingDocument(booking) {
+  await booking.populate("user", "name email");
+  await booking.populate("partner", "name email");
+  return booking;
+}
+
 router.post("/", protect, authorize("user"), async (req, res, next) => {
   try {
     const {
@@ -111,27 +124,35 @@ router.patch("/:id/accept", protect, authorize("partner"), async (req, res, next
       });
     }
 
-    const booking = await Booking.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        partner: null,
-      },
-      {
-        partner: req.user._id,
-        status: "confirmed",
-        serviceStage: "partner_assigned",
-      },
-      { new: true }
-    ).populate("partner", "name email");
+    const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
       return next({
         statusCode: 404,
-        message: "Booking no longer available",
+        message: "Booking not found",
       });
     }
 
-    res.json({ success: true, booking });
+    if (booking.partner) {
+      return next({
+        statusCode: 409,
+        message: "Booking already accepted by another partner",
+      });
+    }
+
+    if (booking.status === "completed" || booking.serviceStage === "paid") {
+      return next({
+        statusCode: 409,
+        message: "Completed bookings cannot be accepted",
+      });
+    }
+
+    booking.partner = req.user._id;
+    booking.status = "confirmed";
+    booking.serviceStage = "partner_assigned";
+    await booking.save();
+
+    res.json({ success: true, booking: await populateBookingDocument(booking) });
   } catch (error) {
     next(error);
   }
@@ -139,7 +160,7 @@ router.patch("/:id/accept", protect, authorize("partner"), async (req, res, next
 
 router.patch("/:id/stage", protect, async (req, res, next) => {
   try {
-    const { serviceStage, status } = req.body;
+    const { serviceStage, status, paymentMethod } = req.body;
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
@@ -155,6 +176,18 @@ router.patch("/:id/stage", protect, async (req, res, next) => {
     }
 
     if (serviceStage) {
+      const partnerCanUpdate = isPartner && partnerStages.includes(serviceStage);
+      const userCanPay =
+        isUser && userStages.includes(serviceStage) && booking.serviceStage === "payment_pending";
+      const adminCanUpdate = req.user.role === "admin";
+
+      if (!partnerCanUpdate && !userCanPay && !adminCanUpdate) {
+        return next({
+          statusCode: 403,
+          message: "This booking stage cannot be updated from your account",
+        });
+      }
+
       booking.serviceStage = serviceStage;
     }
 
@@ -162,7 +195,14 @@ router.patch("/:id/stage", protect, async (req, res, next) => {
       booking.status = status;
     }
 
+    if (serviceStage === "paid") {
+      booking.status = "completed";
+      booking.paymentMethod = paymentMethod || booking.paymentMethod || "upi";
+      booking.paidAt = new Date();
+    }
+
     await booking.save();
+    await booking.populate("user", "name email");
     await booking.populate("partner", "name email");
 
     res.json({ success: true, booking });

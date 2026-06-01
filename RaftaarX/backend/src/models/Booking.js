@@ -67,6 +67,15 @@ const bookingSchema = new mongoose.Schema(
       ],
       default: "finding_driver",
     },
+    paymentMethod: {
+      type: String,
+      enum: ["upi", "card", "cash", null],
+      default: null,
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

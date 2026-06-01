@@ -9,6 +9,25 @@ import { useTheme } from "../hooks/useTheme.js";
 function Hero() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const [activeRiders, setActiveRiders] = React.useState(142);
+  const [activePartners, setActivePartners] = React.useState(86);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveRiders((prev) => {
+        const delta = Math.random() > 0.5 ? 1 : -1;
+        const next = prev + delta;
+        return next < 120 ? 120 : next > 180 ? 180 : next;
+      });
+      setActivePartners((prev) => {
+        const delta = Math.random() > 0.6 ? 1 : -1;
+        const next = prev + delta;
+        return next < 70 ? 70 : next > 110 ? 110 : next;
+      });
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
 
   return (
     <section className="theme-page relative overflow-hidden px-4 pb-16 pt-28 sm:px-6 sm:pb-20 sm:pt-32 lg:px-8">

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  BellRing,
   CheckCircle2,
   Clock3,
   MapPinned,
@@ -129,6 +130,13 @@ function RideStatus() {
 
   const currentStage = booking?.serviceStage || "finding_driver";
   const currentMeta = stageMeta[currentStage] || stageMeta.finding_driver;
+  const currentStep = {
+    finding_driver: 1,
+    partner_assigned: 2,
+    ride_in_progress: 3,
+    payment_pending: 4,
+    paid: 5,
+  }[currentStage] || 1;
   const mapProgress =
     currentStage === "finding_driver"
       ? currentMeta.progress + searchPulse
@@ -181,7 +189,7 @@ function RideStatus() {
           eyebrow="Live Tracking"
           title={currentMeta.title}
           subtitle={currentMeta.note}
-          badge="Step 3 of 5"
+          badge={`Step ${currentStep} of 5`}
           quickLinks={[
             { label: "Booking", to: "/user" },
             { label: "Review", to: "/ride-review", state: { draft: rideData } },
@@ -223,6 +231,27 @@ function RideStatus() {
                   <div className="theme-progress-bar" style={{ width: `${mapProgress}%` }} />
                 </div>
               </div>
+
+              {booking.partner && currentStage === "partner_assigned" ? (
+                <div className="mt-4 rounded-[24px] border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-300">
+                  <BellRing className="mr-2 inline h-4 w-4" />
+                  {booking.partner.name} ne booking accept kar li hai. Service start hote hi
+                  status running ho jayega.
+                </div>
+              ) : null}
+
+              {currentStage === "payment_pending" ? (
+                <div className="mt-4 rounded-[24px] border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-700 dark:text-yellow-200">
+                  Service complete ho gayi hai. Payment button ab active hai.
+                </div>
+              ) : null}
+
+              {currentStage === "paid" ? (
+                <div className="mt-4 rounded-[24px] border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-300">
+                  Payment complete hai
+                  {booking.paymentMethod ? ` via ${booking.paymentMethod.toUpperCase()}` : ""}.
+                </div>
+              ) : null}
             </div>
 
             <RideMapCard

@@ -17,6 +17,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultClient)
   .map((origin) => origin.trim())
   .filter(Boolean);
 const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const localAddressPattern = /^(::1|::ffff:127\.0\.0\.1|127\.0\.0\.1)$/;
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -27,7 +28,13 @@ const apiLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 25,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 200,
+  skip: (req) =>
+    process.env.NODE_ENV !== "production" && localAddressPattern.test(req.ip),
+  message: {
+    success: false,
+    message: "Too many login attempts. Please try again in a few minutes.",
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -78,9 +85,14 @@ app.use("/api/admin", adminRoutes);
 
 app.use((error, _req, res, _next) => {
   const statusCode = error.statusCode || 500;
+  const message =
+    error.code === "LIMIT_UNEXPECTED_FILE"
+      ? "Upload field is not supported or too many files were selected. Upload Aadhar, DL, RC, insurance, and up to 6 bike images."
+      : error.message || "Internal server error";
+
   res.status(statusCode).json({
     success: false,
-    message: error.message || "Internal server error",
+    message,
   });
 });
 

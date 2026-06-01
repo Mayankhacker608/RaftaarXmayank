@@ -1,6 +1,16 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bike, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import {
+  Bike,
+  KeyRound,
+  LockKeyhole,
+  Mail,
+  MessageSquareText,
+  ShieldCheck,
+  UserRound,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../hooks/useAuth.js";
@@ -12,18 +22,9 @@ const roles = [
   { label: "Admin", value: "admin", icon: ShieldCheck },
 ];
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
 function Auth() {
   const navigate = useNavigate();
   const { login, signup, setAuthSession } = useAuth();
-  const googleButtonRef = useRef(null);
-  const googleInitializedRef = useRef(false);
-  const googleAuthStateRef = useRef({
-    role: "user",
-    navigate,
-    setAuthSession,
-  });
   const [mode, setMode] = useState("login");
   const [role, setRole] = useState("user");
   const [formData, setFormData] = useState({
@@ -32,93 +33,67 @@ function Auth() {
     password: "",
     confirmPassword: "",
     adminKey: "",
+    otp: "",
   });
+  const [otpChallenge, setOtpChallenge] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendingOtp, setResendingOtp] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    googleAuthStateRef.current = {
-      role,
-      navigate,
-      setAuthSession,
-    };
-  }, [navigate, role, setAuthSession]);
 
   useEffect(() => {
-    if (!googleClientId) {
-      return undefined;
-    }
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
-    const initializeGoogle = () => {
-      if (!window.google?.accounts?.id || googleInitializedRef.current) {
-        return;
-      }
+  const resetOtpChallenge = () => {
+    setOtpChallenge(null);
+    setNotice("");
+    setResendCooldown(0);
+    setResendingOtp(false);
+    setFormData((previous) => ({
+      ...previous,
+      otp: "",
+    }));
+  };
 
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: async (response) => {
-          const currentRole = googleAuthStateRef.current.role;
-
-          try {
-            setGoogleLoading(true);
-            setError("");
-            const authResponse = await api.post("/auth/google", {
-              credential: response.credential,
-              role: currentRole,
-            });
-            googleAuthStateRef.current.setAuthSession(authResponse);
-            googleAuthStateRef.current.navigate(`/${authResponse.user.role}`);
-          } catch (googleError) {
-            setError(googleError.message);
-          } finally {
-            setGoogleLoading(false);
-          }
-        },
+  const handleResendOtp = async () => {
+    if (!otpChallenge) return;
+    setResendingOtp(true);
+    setError("");
+    setNotice("");
+    try {
+      const res = await api.post("/auth/resend-otp", {
+        verificationId: otpChallenge.verificationId,
       });
-
-      googleInitializedRef.current = true;
-    };
-
-    const existingScript = document.querySelector(
-      'script[data-google-identity="true"]'
-    );
-
-    if (existingScript) {
-      initializeGoogle();
-      return undefined;
+      setNotice(res.message || "New OTP code has been sent!");
+      setResendCooldown(30);
+    } catch (err) {
+      setError(err.message || "Failed to resend OTP. Please try again.");
+    } finally {
+      setResendingOtp(false);
     }
+  };
 
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleIdentity = "true";
-    script.onload = initializeGoogle;
-    document.body.appendChild(script);
 
-    return undefined;
-  }, []);
+  const handleModeChange = (nextMode) => {
+    setMode(nextMode);
+    setError("");
+    resetOtpChallenge();
+  };
 
-  useEffect(() => {
-    if (
-      !googleClientId ||
-      role === "admin" ||
-      !googleButtonRef.current ||
-      !window.google?.accounts?.id ||
-      !googleInitializedRef.current
-    ) {
-      return;
-    }
-
-    googleButtonRef.current.innerHTML = "";
-    window.google.accounts.id.renderButton(googleButtonRef.current, {
-      theme: "outline",
-      size: "large",
-      width: 320,
-      text: mode === "signup" ? "signup_with" : "signin_with",
-    });
-  }, [mode, role]);
+  const handleRoleChange = (nextRole) => {
+    setRole(nextRole);
+    setError("");
+    resetOtpChallenge();
+  };
 
   const handleChange = (event) => {
     setFormData((previous) => ({
@@ -131,8 +106,20 @@ function Auth() {
     event.preventDefault();
     setSubmitting(true);
     setError("");
+    setNotice("");
 
     try {
+      if (otpChallenge) {
+        const authResponse = await api.post("/auth/verify-otp", {
+          verificationId: otpChallenge.verificationId,
+          otp: formData.otp.trim(),
+        });
+
+        setAuthSession(authResponse);
+        navigate(`/${authResponse.user.role}`);
+        return;
+      }
+
       if (mode === "signup") {
         if (formData.password !== formData.confirmPassword) {
           throw new Error("Password and confirm password must match.");
@@ -143,17 +130,35 @@ function Auth() {
         }
       }
 
-      const payload = {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role,
-        adminKey: formData.adminKey,
-      };
+      const payload =
+        mode === "signup"
+          ? {
+              name: formData.name,
+              email: formData.email,
+              password: formData.password,
+              role,
+              adminKey: formData.adminKey,
+            }
+          : {
+              email: formData.email,
+              password: formData.password,
+            };
 
-      const authUser =
+      const authResponse =
         mode === "signup" ? await signup(payload) : await login(payload);
-      navigate(`/${authUser.role}`);
+
+      if (authResponse.requiresOtp) {
+        setOtpChallenge({
+          verificationId: authResponse.verificationId,
+          email: authResponse.email,
+        });
+        setNotice(authResponse.message);
+        setResendCooldown(30);
+
+        return;
+      }
+
+      navigate(`/${authResponse.user.role}`);
     } catch (submitError) {
       setError(submitError.message);
     } finally {
@@ -177,9 +182,8 @@ function Auth() {
           </h1>
           <p className="theme-text-muted mt-6 max-w-2xl text-base sm:text-lg">
             Book Now ke baad yahin role choose kijiye. Successful auth ke baad app
-            direct user, partner, ya admin panel open karega. Admin signup security
-            key ke saath protected hai, aur user/partner roles me Google sign-in
-            available hai.
+            direct user, partner, ya admin panel open karega. Password verify hone
+            ke baad email OTP confirm hoga, phir session start hoga.
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -187,7 +191,8 @@ function Auth() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setRole(value)}
+                onClick={() => handleRoleChange(value)}
+                disabled={Boolean(otpChallenge)}
                 className={`rounded-2xl border p-5 text-left transition ${
                   role === value
                     ? "theme-chip"
@@ -220,7 +225,8 @@ function Auth() {
               <button
                 key={currentMode}
                 type="button"
-                onClick={() => setMode(currentMode)}
+                onClick={() => handleModeChange(currentMode)}
+                disabled={Boolean(otpChallenge)}
                 className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold capitalize transition ${
                   mode === currentMode
                     ? "theme-primary-button"
@@ -232,19 +238,27 @@ function Auth() {
             ))}
           </div>
 
+          {mode === "login" ? (
+            <div className="mt-5 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-200">
+              Login email ke actual account role ke according dashboard khulega. Admin login
+              ke liye admin email/password ke baad email OTP verify hoga.
+            </div>
+          ) : null}
+
           <div className="mt-8 space-y-5">
             {mode === "signup" && (
               <label className="block">
                 <span className="theme-text-muted mb-2 block text-sm">Full name</span>
-                <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                <div className={`theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3 ${otpChallenge ? "opacity-50 cursor-not-allowed" : ""}`}>
                   <UserRound className="theme-accent h-5 w-5" />
                   <input
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Mayank Kumar"
-                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
+                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)] disabled:cursor-not-allowed"
                     required
+                    disabled={Boolean(otpChallenge)}
                   />
                 </div>
               </label>
@@ -252,7 +266,7 @@ function Auth() {
 
             <label className="block">
               <span className="theme-text-muted mb-2 block text-sm">Email</span>
-              <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+              <div className={`theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3 ${otpChallenge ? "opacity-50 cursor-not-allowed" : ""}`}>
                 <Mail className="theme-accent h-5 w-5" />
                 <input
                   type="email"
@@ -260,25 +274,36 @@ function Auth() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="you@example.com"
-                  className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
+                  className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)] disabled:cursor-not-allowed"
                   required
+                  disabled={Boolean(otpChallenge)}
                 />
               </div>
             </label>
 
             <label className="block">
               <span className="theme-text-muted mb-2 block text-sm">Password</span>
-              <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+              <div className={`theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3 ${otpChallenge ? "opacity-50 cursor-not-allowed" : ""}`}>
                 <LockKeyhole className="theme-accent h-5 w-5" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter password"
-                  className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
+                  className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)] disabled:cursor-not-allowed"
                   required
+                  disabled={Boolean(otpChallenge)}
                 />
+                {!otpChallenge && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="theme-text-soft hover:text-[var(--app-text)] transition ml-2"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                )}
               </div>
             </label>
 
@@ -287,17 +312,27 @@ function Auth() {
                 <span className="theme-text-muted mb-2 block text-sm">
                   Confirm password
                 </span>
-                <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                <div className={`theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3 ${otpChallenge ? "opacity-50 cursor-not-allowed" : ""}`}>
                   <LockKeyhole className="theme-accent h-5 w-5" />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Re-enter password"
-                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
+                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)] disabled:cursor-not-allowed"
                     required
+                    disabled={Boolean(otpChallenge)}
                   />
+                  {!otpChallenge && (
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      className="theme-text-soft hover:text-[var(--app-text)] transition ml-2"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  )}
                 </div>
               </label>
             )}
@@ -305,7 +340,7 @@ function Auth() {
             {mode === "signup" && role === "admin" && (
               <label className="block">
                 <span className="theme-text-muted mb-2 block text-sm">Admin key</span>
-                <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                <div className={`theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3 ${otpChallenge ? "opacity-50 cursor-not-allowed" : ""}`}>
                   <KeyRound className="theme-accent h-5 w-5" />
                   <input
                     type="password"
@@ -313,22 +348,74 @@ function Auth() {
                     value={formData.adminKey}
                     onChange={handleChange}
                     placeholder="Enter admin signup key"
-                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)]"
+                    className="w-full bg-transparent outline-none placeholder:text-[var(--app-text-soft)] disabled:cursor-not-allowed"
                     required
+                    disabled={Boolean(otpChallenge)}
                   />
                 </div>
               </label>
             )}
+
+            {otpChallenge && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">
+                      OTP sent to {otpChallenge.email}
+                    </p>
+                    <p className="theme-text-muted mt-1 text-sm">
+                      6 digit code enter karke verification complete kijiye.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={resetOtpChallenge}
+                    className="theme-text-muted text-sm font-semibold hover:text-[var(--app-text)]"
+                  >
+                    Change
+                  </button>
+                </div>
+                <label className="mt-4 block">
+                  <span className="theme-text-muted mb-2 block text-sm">OTP code</span>
+                  <div className="theme-card-soft flex items-center gap-3 rounded-2xl px-4 py-3">
+                    <MessageSquareText className="theme-accent h-5 w-5" />
+                    <input
+                      inputMode="numeric"
+                      maxLength={6}
+                      name="otp"
+                      value={formData.otp}
+                      onChange={handleChange}
+                      placeholder="123456"
+                      className="w-full bg-transparent tracking-[0.35em] outline-none placeholder:tracking-normal placeholder:text-[var(--app-text-soft)]"
+                      required
+                    />
+                  </div>
+                </label>
+                <div className="mt-3 flex justify-between items-center px-1">
+                  <span className="text-xs text-emerald-600/80 dark:text-emerald-400/80">
+                    Didn't receive code?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={resendingOtp || resendCooldown > 0}
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {resendingOtp
+                      ? "Resending..."
+                      : resendCooldown > 0
+                      ? `Resend OTP in ${resendCooldown}s`
+                      : "Resend OTP"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {role !== "admin" && googleClientId && (
-            <div className="theme-card-soft mt-6 overflow-hidden rounded-2xl p-4">
-              <p className="theme-text-muted mb-3 text-sm">Quick access with Google</p>
-              <div ref={googleButtonRef} className="min-h-[44px] max-w-full overflow-hidden" />
-              {googleLoading && (
-                <p className="theme-text-soft mt-3 text-sm">Signing in with Google...</p>
-              )}
-            </div>
+          {notice && (
+            <p className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-200">
+              {notice}
+            </p>
           )}
 
           {error && (
@@ -344,6 +431,8 @@ function Auth() {
           >
             {submitting
               ? "Please wait..."
+              : otpChallenge
+              ? "Verify OTP"
               : mode === "signup"
               ? "Create account"
               : "Login now"}

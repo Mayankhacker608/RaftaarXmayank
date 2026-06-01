@@ -65,6 +65,11 @@ function Payment() {
       return;
     }
 
+    if (booking.serviceStage !== "payment_pending") {
+      setMessage("Partner service complete mark karega tab payment unlock hoga.");
+      return;
+    }
+
     try {
       setPaying(true);
       const response = await api.patch(
@@ -72,6 +77,7 @@ function Payment() {
         {
           status: "completed",
           serviceStage: "paid",
+          paymentMethod: selectedMethod,
         },
         token
       );
@@ -144,6 +150,12 @@ function Payment() {
                   {(booking.serviceStage || booking.status || "").replaceAll("_", " ")}
                 </p>
               </div>
+              {booking.paymentMethod ? (
+                <div className="theme-card-soft rounded-2xl p-4">
+                  <p className="theme-text-soft text-sm">Payment method</p>
+                  <p className="mt-1 text-lg font-semibold uppercase">{booking.paymentMethod}</p>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -182,13 +194,19 @@ function Payment() {
             <button
               type="button"
               onClick={confirmPayment}
-              disabled={paying || booking.serviceStage === "paid"}
+              disabled={
+                paying ||
+                booking.serviceStage === "paid" ||
+                booking.serviceStage !== "payment_pending"
+              }
               className="theme-primary-button mt-6 w-full rounded-2xl px-6 py-4 font-bold disabled:cursor-not-allowed disabled:opacity-60"
             >
               {booking.serviceStage === "paid"
                 ? "Payment already completed"
                 : paying
                   ? "Confirming payment..."
+                  : booking.serviceStage !== "payment_pending"
+                    ? "Payment unlocks after service completion"
                   : `Pay with ${selectedMethod.toUpperCase()}`}
             </button>
 

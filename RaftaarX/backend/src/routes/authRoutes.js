@@ -1,14 +1,42 @@
 import bcrypt from "bcryptjs";
 import express from "express";
+import mongoose from "mongoose";
 
 import { protect } from "../middleware/auth.js";
+import OtpVerification from "../models/OtpVerification.js";
 import User from "../models/User.js";
 import { generateToken } from "../utils/auth.js";
 import { verifyGoogleCredential } from "../utils/googleAuth.js";
-import { sendMailIfConfigured } from "../utils/mailer.js";
+import {
+  sendMailIfConfigured,
+  sendOtpEmail,
+} from "../utils/mailer.js";
+import {
+  generateOtp,
+  getOtpExpiryDate,
+  getOtpExpiryMinutes,
+} from "../utils/otp.js";
 
 const router = express.Router();
 const validRoles = ["user", "partner", "admin"];
+const maxOtpAttempts = 5;
+
+function serializeUser(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+}
+
+function createAuthResponse(user) {
+  return {
+    success: true,
+    token: generateToken(user._id),
+    user: serializeUser(user),
+  };
+}
 
 async function sendWelcomeEmail(user) {
   await sendMailIfConfigured({
@@ -17,6 +45,63 @@ async function sendWelcomeEmail(user) {
     text: `Hello ${user.name}, your ${user.role} account is ready on RaftaarX.`,
   });
 }
+
+async function createOtpChallenge({
+  purpose,
+  email,
+  name,
+  userId,
+  pendingUser,
+}) {
+  await OtpVerification.deleteMany({
+    purpose,
+    email: email.toLowerCase(),
+    consumedAt: null,
+  });
+
+  const otp = generateOtp();
+  const otpHash = await bcrypt.hash(otp, 10);
+  const verification = await OtpVerification.create({
+    purpose,
+    email,
+    userId,
+    pendingUser,
+    otpHash,
+    expiresAt: getOtpExpiryDate(),
+  });
+
+  try {
+    await sendOtpEmail({
+      to: email,
+      name,
+      otp,
+      expiryMinutes: getOtpExpiryMinutes(),
+    });
+
+    return {
+      success: true,
+      requiresOtp: true,
+      verificationId: verification._id,
+      email,
+      message: "OTP email sent. Please verify to continue.",
+    };
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[DEVELOPMENT WARNING] Failed to send OTP email via SMTP: ${error.message}`);
+      console.log(`Continuing anyway because we are in development mode. Use OTP: ${otp}`);
+      return {
+        success: true,
+        requiresOtp: true,
+        verificationId: verification._id,
+        email,
+        message: `OTP generated (Email simulation). Your verification code is: ${otp}`,
+      };
+    }
+    await OtpVerification.deleteOne({ _id: verification._id });
+    throw error;
+  }
+}
+
 
 router.post("/signup", async (req, res, next) => {
   try {
@@ -54,25 +139,19 @@ router.post("/signup", async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      name,
+    const challenge = await createOtpChallenge({
+      purpose: "signup",
       email,
-      password: hashedPassword,
-      role,
-    });
-
-    await sendWelcomeEmail(user);
-
-    res.status(201).json({
-      success: true,
-      token: generateToken(user._id),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+      name,
+      pendingUser: {
+        name,
+        email,
+        password: hashedPassword,
+        role,
       },
     });
+
+    res.status(202).json(challenge);
   } catch (error) {
     next(error);
   }
@@ -106,16 +185,84 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
-    res.json({
-      success: true,
-      token: generateToken(user._id),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    const challenge = await createOtpChallenge({
+      purpose: "login",
+      email: user.email,
+      name: user.name,
+      userId: user._id,
     });
+
+    res.status(202).json(challenge);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/verify-otp", async (req, res, next) => {
+  try {
+    const { verificationId, otp } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(verificationId) || !/^\d{6}$/.test(String(otp || ""))) {
+      return next({ statusCode: 400, message: "Valid OTP is required" });
+    }
+
+    const verification = await OtpVerification.findOne({
+      _id: verificationId,
+      consumedAt: null,
+    });
+
+    if (!verification || verification.expiresAt.getTime() < Date.now()) {
+      return next({ statusCode: 400, message: "OTP expired. Please request a new one." });
+    }
+
+    if (verification.attempts >= maxOtpAttempts) {
+      return next({
+        statusCode: 429,
+        message: "Too many wrong OTP attempts. Please request a new OTP.",
+      });
+    }
+
+    const otpMatches = await bcrypt.compare(String(otp), verification.otpHash);
+    if (!otpMatches) {
+      verification.attempts += 1;
+      await verification.save();
+      return next({ statusCode: 401, message: "Invalid OTP" });
+    }
+
+    verification.consumedAt = new Date();
+    await verification.save();
+
+    if (verification.purpose === "signup") {
+      const pendingUser = verification.pendingUser;
+      const existingUser = await User.findOne({
+        email: pendingUser.email.toLowerCase(),
+      });
+
+      if (existingUser) {
+        return next({
+          statusCode: 409,
+          message: "Email is already registered",
+        });
+      }
+
+      const user = await User.create({
+        name: pendingUser.name,
+        email: pendingUser.email,
+        password: pendingUser.password,
+        role: pendingUser.role,
+      });
+
+      await sendWelcomeEmail(user);
+
+      return res.status(201).json(createAuthResponse(user));
+    }
+
+    const user = await User.findById(verification.userId);
+    if (!user) {
+      return next({ statusCode: 404, message: "Account not found" });
+    }
+
+    res.json(createAuthResponse(user));
   } catch (error) {
     next(error);
   }
@@ -155,31 +302,87 @@ router.post("/google", async (req, res, next) => {
     }
 
     if (!user) {
-      user = await User.create({
-        name: payload.name || payload.email.split("@")[0],
+      const challenge = await createOtpChallenge({
+        purpose: "signup",
         email: payload.email,
-        password: await bcrypt.hash(`${payload.sub}-${Date.now()}`, 10),
-        role,
+        name: payload.name || payload.email.split("@")[0],
+        pendingUser: {
+          name: payload.name || payload.email.split("@")[0],
+          email: payload.email,
+          password: await bcrypt.hash(`${payload.sub}-${Date.now()}`, 10),
+          role,
+        },
       });
 
-      await sendWelcomeEmail(user);
+      return res.status(202).json(challenge);
     }
 
-    res.json({
-      success: true,
-      token: generateToken(user._id),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    const challenge = await createOtpChallenge({
+      purpose: "login",
+      email: user.email,
+      name: user.name,
+      userId: user._id,
     });
+
+    res.status(202).json(challenge);
   } catch (error) {
     next({
       statusCode: 401,
       message: "Google sign-in failed",
     });
+  }
+});
+
+router.post("/resend-otp", async (req, res, next) => {
+  try {
+    const { verificationId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(verificationId)) {
+      return next({ statusCode: 400, message: "Valid verification session ID is required" });
+    }
+
+    const verification = await OtpVerification.findById(verificationId);
+
+    if (!verification || verification.consumedAt) {
+      return next({
+        statusCode: 404,
+        message: "Verification session not found or already completed.",
+      });
+    }
+
+    const otp = generateOtp();
+    const otpHash = await bcrypt.hash(otp, 10);
+
+    verification.otpHash = otpHash;
+    verification.attempts = 0;
+    verification.expiresAt = getOtpExpiryDate();
+    await verification.save();
+
+    try {
+      await sendOtpEmail({
+        to: verification.email,
+        name: verification.pendingUser?.name || "there",
+        otp,
+        expiryMinutes: getOtpExpiryMinutes(),
+      });
+
+      res.json({
+        success: true,
+        message: "New OTP code sent successfully.",
+      });
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[DEVELOPMENT WARNING] Failed to send resend-OTP email: ${error.message}`);
+        console.log(`Continuing anyway because we are in development mode. Use new OTP: ${otp}`);
+        return res.json({
+          success: true,
+          message: `New OTP generated (Email simulation). Your verification code is: ${otp}`,
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    next(error);
   }
 });
 
@@ -189,5 +392,6 @@ router.get("/me", protect, async (req, res) => {
     user: req.user,
   });
 });
+
 
 export default router;
