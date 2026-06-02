@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://backend-mayanks-projects-accab2b4.vercel.app/api/$1"
+      "destination": "/api/$1"
     },
     {
       "source": "/(.*)",

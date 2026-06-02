@@ -17,7 +17,7 @@ import { api } from "../lib/api.js";
 const stageMeta = {
   finding_driver: {
     title: "Finding the nearest partner",
-    note: "Request nearby approved partners ke paas broadcast ho chuki hai.",
+    note: "Request broadcasted to nearby approved partners.",
     progress: 20,
   },
   partner_assigned: {
@@ -32,7 +32,7 @@ const stageMeta = {
   },
   payment_pending: {
     title: "Service completed",
-    note: "Trip complete ho gayi hai. Payment confirm karke booking close kijiye.",
+    note: "Trip is completed. Confirm payment to close the booking.",
     progress: 94,
   },
   paid: {
@@ -57,7 +57,21 @@ function RideStatus() {
 
     const createBooking = async () => {
       if (!rideData) {
-        navigate("/user");
+        try {
+          const res = await api.get("/bookings/me", token);
+          const activeBooking = res.bookings.find((b) => b.serviceStage !== "paid");
+          if (activeBooking && active) {
+            setBooking(activeBooking);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error("Failed to resume active booking:", err);
+        }
+
+        if (active) {
+          navigate("/user");
+        }
         return;
       }
 
@@ -235,20 +249,19 @@ function RideStatus() {
               {booking.partner && currentStage === "partner_assigned" ? (
                 <div className="mt-4 rounded-[24px] border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-300">
                   <BellRing className="mr-2 inline h-4 w-4" />
-                  {booking.partner.name} ne booking accept kar li hai. Service start hote hi
-                  status running ho jayega.
+                  {booking.partner.name} has accepted the booking. Status will update to in-progress once service starts.
                 </div>
               ) : null}
 
               {currentStage === "payment_pending" ? (
                 <div className="mt-4 rounded-[24px] border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-700 dark:text-yellow-200">
-                  Service complete ho gayi hai. Payment button ab active hai.
+                  Service is completed. Payment options are now active.
                 </div>
               ) : null}
 
               {currentStage === "paid" ? (
                 <div className="mt-4 rounded-[24px] border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-300">
-                  Payment complete hai
+                  Payment is completed
                   {booking.paymentMethod ? ` via ${booking.paymentMethod.toUpperCase()}` : ""}.
                 </div>
               ) : null}
@@ -259,7 +272,7 @@ function RideStatus() {
               end={booking.destinationLocation || rideData?.destinationPoint}
               progress={mapProgress}
               heading="Live route map"
-              helperText="Partner assignment aur trip stage ke saath map indicator update hota rahega."
+              helperText="Map indicator updates dynamically with partner assignment and trip stage."
             />
           </div>
 
@@ -274,7 +287,7 @@ function RideStatus() {
                 <div>
                   <h2 className="text-2xl font-black">Booking details</h2>
                   <p className="theme-text-muted text-sm">
-                    Current partner assignment, route info aur booking state.
+                    Current partner assignment, route info, and booking state.
                   </p>
                 </div>
               </div>
@@ -306,7 +319,7 @@ function RideStatus() {
                 <div>
                   <h2 className="text-2xl font-black">Status notes</h2>
                   <p className="theme-text-muted text-sm">
-                    Ye panel current booking stage ka exact meaning dikhata hai.
+                    This panel displays status details of the current booking stage.
                   </p>
                 </div>
               </div>
@@ -320,14 +333,14 @@ function RideStatus() {
                   <Clock3 className="theme-accent mt-0.5 h-5 w-5" />
                   <p className="text-sm leading-6">
                     {booking.partner
-                      ? "Partner dashboard se ride stage update hote hi yahan instantly reflect hoga."
-                      : "Driver is finding stage me request open bookings pool me visible hai."}
+                      ? "Status updates on the partner dashboard will reflect here instantly."
+                      : "During the search phase, the request is visible in the open bookings pool."}
                   </p>
                 </div>
                 <div className="theme-card-soft flex items-start gap-3 rounded-2xl p-4">
                   <MapPinned className="theme-accent mt-0.5 h-5 w-5" />
                   <p className="text-sm leading-6">
-                    Booking payment screen tab unlock hogi jab partner service ko completed mark karega.
+                    Payment screen will unlock once the partner marks the service as completed.
                   </p>
                 </div>
               </div>

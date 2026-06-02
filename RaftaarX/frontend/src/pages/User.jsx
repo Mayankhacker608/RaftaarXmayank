@@ -140,7 +140,7 @@ function User() {
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                {vehicleOptions.map(({ label, value, icon: Icon, eta, note }) => {
+                {vehicleOptions.map(({ label, value, icon, eta, note }) => {
                   const active = vehicle === value;
 
                   return (
@@ -152,7 +152,7 @@ function User() {
                         active ? "theme-chip" : "theme-card-soft"
                       }`}
                     >
-                      <Icon className="theme-accent h-8 w-8" />
+                      {React.createElement(icon, { className: "theme-accent h-8 w-8" })}
                       <p className="mt-4 text-lg font-semibold">{label}</p>
                       <p className="theme-text-muted mt-1 text-sm">{eta}</p>
                       <p className="theme-text-soft mt-2 text-xs leading-5">{note}</p>

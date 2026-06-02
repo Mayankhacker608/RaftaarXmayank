@@ -178,12 +178,11 @@ function Auth() {
             Fast Access
           </p>
           <h1 className="mt-4 text-3xl font-black leading-tight sm:text-4xl md:text-6xl">
-            Login ya signup karke seedha apne dashboard tak pahunchiye.
+            Log in or sign up to access your dashboard.
           </h1>
           <p className="theme-text-muted mt-6 max-w-2xl text-base sm:text-lg">
-            Book Now ke baad yahin role choose kijiye. Successful auth ke baad app
-            direct user, partner, ya admin panel open karega. Password verify hone
-            ke baad email OTP confirm hoga, phir session start hoga.
+            Select your role to proceed. After successful authentication, you will be
+            redirected to your dashboard (user, partner, or admin panel).
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -204,8 +203,8 @@ function Auth() {
                 })}
                 <p className="text-xl font-bold">{label}</p>
                 <p className="theme-text-muted mt-2 text-sm">
-                  {value === "user" && "Ride booking aur payment flow"}
-                  {value === "partner" && "Document upload aur approval tracking"}
+                  {value === "user" && "Ride booking and payment flow"}
+                  {value === "partner" && "Document upload and approval tracking"}
                   {value === "admin" && "Protected admin review dashboard"}
                 </p>
               </button>
@@ -240,8 +239,8 @@ function Auth() {
 
           {mode === "login" ? (
             <div className="mt-5 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-200">
-              Login email ke actual account role ke according dashboard khulega. Admin login
-              ke liye admin email/password ke baad email OTP verify hoga.
+              You will be redirected to the dashboard corresponding to your account's role.
+              Admin accounts require password and email OTP verification.
             </div>
           ) : null}
 
@@ -364,7 +363,7 @@ function Auth() {
                       OTP sent to {otpChallenge.email}
                     </p>
                     <p className="theme-text-muted mt-1 text-sm">
-                      6 digit code enter karke verification complete kijiye.
+                      Enter the 6-digit code to complete verification.
                     </p>
                   </div>
                   <button

@@ -63,7 +63,7 @@ function RideReview() {
         <DashboardHeader
           eyebrow="Ride Review"
           title="Review your route before booking"
-          subtitle="Distance, fare, ETA aur service notes confirm karke hi request live market me jayegi."
+          subtitle="Your request will be sent to the live market after verifying distance, fare, ETA, and service notes."
           badge="Step 2 of 5"
           quickLinks={[
             { label: "Booking", to: "/user" },
@@ -80,7 +80,7 @@ function RideReview() {
                 <div>
                   <h2 className="text-2xl font-black">Trip summary</h2>
                   <p className="theme-text-muted text-sm">
-                    Pickup se destination tak booking ke core details yahan lock ho rahi hain.
+                    The core details of your booking from pickup to destination are locked here.
                   </p>
                 </div>
               </div>
@@ -134,7 +134,7 @@ function RideReview() {
                 <div>
                   <h2 className="text-2xl font-black">Service guidance</h2>
                   <p className="theme-text-muted text-sm">
-                    Route length aur selected vehicle ke hisaab se useful recommendations.
+                    Useful recommendations based on route length and selected vehicle.
                   </p>
                 </div>
               </div>
@@ -154,7 +154,7 @@ function RideReview() {
                 <div>
                   <h2 className="text-2xl font-black">What happens next</h2>
                   <p className="theme-text-muted text-sm">
-                    Booking request submit hone ke baad system ye sequence follow karega.
+                    The system will follow this sequence after the booking request is submitted.
                   </p>
                 </div>
               </div>

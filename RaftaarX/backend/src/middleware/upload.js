@@ -17,7 +17,9 @@ export const upload = multer({
   },
   fileFilter: (_req, file, cb) => {
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      cb(new Error("Only PDF, JPG, PNG, and WEBP files are allowed"));
+      const error = new Error("Only PDF, JPG, PNG, and WEBP files are allowed");
+      error.statusCode = 400;
+      cb(error);
       return;
     }
 

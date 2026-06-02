@@ -86,11 +86,24 @@ app.use("/api/partners", partnerRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use((error, _req, res, _next) => {
-  const statusCode = error.statusCode || 500;
-  const message =
-    error.code === "LIMIT_UNEXPECTED_FILE"
-      ? "Upload field is not supported or too many files were selected. Upload Aadhar, DL, RC, insurance, and up to 6 bike images."
-      : error.message || "Internal server error";
+  const uploadErrorMessages = {
+    LIMIT_FILE_SIZE:
+      "Each upload must be 2 MB or smaller. Please compress the file and try again.",
+    LIMIT_UNEXPECTED_FILE:
+      "Upload field is not supported or too many files were selected. Upload Aadhar, DL, RC, insurance, and up to 10 bike images.",
+    LIMIT_FILE_COUNT:
+      "Too many files selected. Upload Aadhar, DL, RC, insurance, and up to 10 bike images.",
+  };
+  const isUploadLimitError = Boolean(uploadErrorMessages[error.code]);
+  const isValidationError = error.name === "ValidationError";
+  const isMongoDocumentTooLarge =
+    error.name === "MongoServerError" &&
+    String(error.message || "").toLowerCase().includes("object to insert too large");
+  const statusCode =
+    error.statusCode || (isUploadLimitError || isValidationError || isMongoDocumentTooLarge ? 400 : 500);
+  const message = isMongoDocumentTooLarge
+    ? "Uploaded files are too large to save. Please compress documents/images and try again."
+    : uploadErrorMessages[error.code] || error.message || "Internal server error";
 
   res.status(statusCode).json({
     success: false,

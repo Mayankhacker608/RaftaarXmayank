@@ -17,7 +17,7 @@ router.post(
     { name: "dl", maxCount: 1 },
     { name: "rc", maxCount: 1 },
     { name: "insurance", maxCount: 1 },
-    { name: "bikeImages", maxCount: 6 },
+    { name: "bikeImages", maxCount: 10 },
   ]),
   async (req, res, next) => {
     try {

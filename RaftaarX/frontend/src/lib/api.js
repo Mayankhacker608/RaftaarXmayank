@@ -17,10 +17,23 @@ async function request(path, options = {}) {
     );
   }
 
-  const data = await response.json().catch(() => ({}));
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await response.json().catch(() => ({}))
+    : {};
 
   if (!response.ok) {
-    throw new Error(data.message || "Request failed");
+    if (data.message) {
+      throw new Error(data.message);
+    }
+
+    if (response.status === 413) {
+      throw new Error(
+        "Upload size too large. Please compress files or upload smaller PDFs/images."
+      );
+    }
+
+    throw new Error(`Request failed (${response.status})`);
   }
 
   return data;

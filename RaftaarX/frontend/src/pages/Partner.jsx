@@ -25,6 +25,8 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../hooks/useAuth.js";
 import { api } from "../lib/api.js";
+import { compressImage } from "../lib/image.js";
+import LightboxModal from "../components/LightboxModal.jsx";
 
 const onboardingSteps = [
   { key: "vehicle", label: "Vehicle" },
@@ -35,7 +37,33 @@ const onboardingSteps = [
 ];
 
 const requiredDocs = ["aadhar", "dl", "rc", "insurance"];
-const maxBikeImages = 6;
+const maxBikeImages = 10;
+const maxSingleUploadBytes = 2 * 1024 * 1024;
+const maxSubmissionBytes = 4 * 1024 * 1024;
+
+function formatFileSize(bytes) {
+  if (!bytes) {
+    return "0 KB";
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.ceil(bytes / 1024)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function prepareUploadFile(file, fieldName) {
+  if (!file?.type?.startsWith("image/")) {
+    return file;
+  }
+
+  if (fieldName === "bikeImages") {
+    return compressImage(file, 900, 900, 0.68, 180 * 1024);
+  }
+
+  return compressImage(file, 1400, 1400, 0.74, 450 * 1024);
+}
 
 function formatDate(value) {
   return new Date(value).toLocaleString("en-IN", {
@@ -130,6 +158,7 @@ function Partner() {
   const [requestDrawer, setRequestDrawer] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [lightbox, setLightbox] = useState({ isOpen: false, title: "", file: null });
 
   const fetchPartnerData = useCallback(async () => {
     try {
@@ -345,30 +374,108 @@ function Partner() {
     return Math.round(((currentStep + 1) / onboardingSteps.length) * 100);
   }, [currentStep]);
 
-  const handleChange = (event) => {
+  const removeBikeImage = (indexToRemove) => {
+    setFormData((previous) => ({
+      ...previous,
+      bikeImages: previous.bikeImages.filter((_, index) => index !== indexToRemove),
+    }));
+  };
+
+  const getSubmissionSize = (data = formData) =>
+    requiredDocs.reduce((total, doc) => total + (data[doc]?.size || 0), 0) +
+    data.bikeImages.reduce((total, image) => total + (image?.size || 0), 0);
+
+  const hasRequiredFiles = () =>
+    requiredDocs.every((doc) => formData[doc] instanceof File) &&
+    formData.bikeImages.length >= 2;
+
+  const appendPartnerFormData = (payload) => {
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key === "bikeImages") {
+        value.forEach((image) => {
+          if (image instanceof File) {
+            payload.append("bikeImages", image);
+          }
+        });
+        return;
+      }
+
+      if (value instanceof File) {
+        payload.append(key, value);
+        return;
+      }
+
+      if (value === null || value === undefined || value === "") {
+        return;
+      }
+
+      payload.append(key, String(value));
+    });
+  };
+
+  const handleChange = async (event) => {
     const { name, files, value } = event.target;
 
     if (files) {
       if (name === "bikeImages") {
-        const selectedImages = Array.from(files).slice(0, maxBikeImages);
+        setError("Selected images optimize ho rahi hain...");
+        const newImages = await Promise.all(
+          Array.from(files).map((file) => prepareUploadFile(file, name))
+        );
+        const oversizedImage = newImages.find(
+          (image) => image.size > maxSingleUploadBytes
+        );
 
-        setFormData((previous) => ({
-          ...previous,
-          bikeImages: selectedImages,
-        }));
-
-        if (files.length > maxBikeImages) {
-          setError(`Maximum ${maxBikeImages} bike images upload kar sakte hain.`);
-        } else {
-          setError("");
+        if (oversizedImage) {
+          setError(
+            `${oversizedImage.name} ${formatFileSize(
+              oversizedImage.size
+            )} hai. Har image ${formatFileSize(maxSingleUploadBytes)} se chhoti rakhein.`
+          );
+          return;
         }
+
+        setFormData((previous) => {
+          const existingImages = previous.bikeImages || [];
+          const filteredNewImages = newImages.filter(
+            (newImg) =>
+              !existingImages.some(
+                (exist) => exist.name === newImg.name && exist.size === newImg.size
+              )
+          );
+          const combined = [...existingImages, ...filteredNewImages].slice(0, maxBikeImages);
+
+          if (existingImages.length + filteredNewImages.length > maxBikeImages) {
+            setError(`Maximum ${maxBikeImages} bike images limit reached.`);
+          } else {
+            setError("");
+          }
+
+          return {
+            ...previous,
+            bikeImages: combined,
+          };
+        });
+        return;
+      }
+
+      const preparedFile = await prepareUploadFile(files[0], name);
+
+      if (preparedFile?.size > maxSingleUploadBytes) {
+        setError(
+          `${preparedFile.name} ${formatFileSize(
+            preparedFile.size
+          )} hai. Har file ${formatFileSize(maxSingleUploadBytes)} se chhoti rakhein.`
+        );
+        event.target.value = "";
         return;
       }
 
       setFormData((previous) => ({
         ...previous,
-        [name]: files[0],
+        [name]: preparedFile,
       }));
+      setError("");
       return;
     }
 
@@ -387,20 +494,26 @@ function Partner() {
       return;
     }
 
+    if (!hasRequiredFiles()) {
+      setError(
+        "Aadhar, DL, RC, insurance, aur kam se kam 2 bike images upload karein."
+      );
+      return;
+    }
+
+    const submissionSize = getSubmissionSize();
+
+    if (submissionSize > maxSubmissionBytes) {
+      setError(
+        `Upload total ${formatFileSize(submissionSize)} hai. Submit se pehle total files ${formatFileSize(
+          maxSubmissionBytes
+        )} ke andar rakhein. Images auto-compress hoti hain; large PDFs ko chhota karke upload karein.`
+      );
+      return;
+    }
+
     const payload = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      if (key === "bikeImages") {
-        value.forEach((image) => payload.append("bikeImages", image));
-        return;
-      }
-
-      if (value instanceof File) {
-        payload.append(key, value);
-        return;
-      }
-
-      payload.append(key, value);
-    });
+    appendPartnerFormData(payload);
 
     try {
       setSubmitting(true);
@@ -411,7 +524,8 @@ function Partner() {
       setMessage("Partner onboarding submitted. Admin review pending.");
       setCurrentStep(4);
     } catch (submitError) {
-      setError(submitError.message);
+      console.error(submitError);
+      setError(submitError.message || "Request failed. Please check your details and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -427,7 +541,7 @@ function Partner() {
       setAvailableBookings((previous) =>
         previous.filter((booking) => booking._id !== bookingId)
       );
-      setMessage("Booking accepted. User ko partner assigned notification mil gayi.");
+      setMessage("Booking accepted. The user has been notified of their assigned partner.");
       fetchPartnerData();
     } catch (acceptError) {
       setError(acceptError.message);
@@ -457,8 +571,8 @@ function Partner() {
       );
       setMessage(
         serviceStage === "ride_in_progress"
-          ? "Service running mark ho gayi. User tracking screen update ho gayi."
-          : "Service complete mark ho gayi. User ke liye payment unlock ho gaya."
+          ? "Service marked as in-progress. User tracking screen updated."
+          : "Service marked as completed. Payment option unlocked for user."
       );
       fetchPartnerData();
     } catch (stageError) {
@@ -502,7 +616,7 @@ function Partner() {
     if (booking.serviceStage === "payment_pending") {
       return (
         <p className="mt-4 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-200">
-          Payment pending hai. User payment confirm karega to booking complete ho jayegi.
+          Payment is pending. The booking will be complete once the user confirms the payment.
         </p>
       );
     }
@@ -555,7 +669,7 @@ function Partner() {
               </p>
               <h3 className="mt-2 text-2xl font-black">{latestApplication.name}</h3>
               <p className="theme-text-muted mt-2 text-sm">
-                Ye wahi data hai jo partner onboarding me fill hua tha.
+                This is the details submitted during partner onboarding.
               </p>
             </div>
             <span
@@ -568,9 +682,9 @@ function Partner() {
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {infoCards.map(({ label, value, icon: Icon }) => (
+            {infoCards.map(({ label, value, icon }) => (
               <div key={label} className="theme-card rounded-2xl p-4">
-                <Icon className="theme-accent h-5 w-5" />
+                {React.createElement(icon, { className: "theme-accent h-5 w-5" })}
                 <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
                   {label}
                 </p>
@@ -586,23 +700,55 @@ function Partner() {
             <h3 className="text-xl font-semibold">Admin review package</h3>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {requiredDocs.map((doc) => (
-              <div key={doc} className="theme-card flex items-center justify-between rounded-2xl p-4">
-                <span className="text-sm font-semibold uppercase">{doc}</span>
-                <span className={latestApplication[doc] ? "text-green-600" : "theme-text-soft"}>
-                  {latestApplication[doc] ? "Uploaded" : "Missing"}
-                </span>
-              </div>
-            ))}
+            {requiredDocs.map((doc) => {
+              const fileObj = latestApplication[doc];
+              return (
+                <div key={doc} className="theme-card flex items-center justify-between rounded-2xl p-4">
+                  <span className="text-sm font-semibold uppercase">{doc}</span>
+                  {fileObj ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLightbox({
+                          isOpen: true,
+                          title: `${doc.toUpperCase()} Document`,
+                          file: {
+                            path: api.asset(fileObj.path),
+                            mimetype: fileObj.mimetype,
+                            filename: fileObj.filename,
+                          },
+                        })
+                      }
+                      className="text-xs font-bold text-yellow-500 hover:text-yellow-600 transition"
+                    >
+                      View Doc
+                    </button>
+                  ) : (
+                    <span className="theme-text-soft text-xs">Missing</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {latestApplication.bikeImages?.length ? (
-              latestApplication.bikeImages.slice(0, 4).map((image, index) => (
+              latestApplication.bikeImages.map((image, index) => (
                 <img
                   key={`${latestApplication._id}-${index}`}
                   src={api.asset(image.path)}
                   alt={`Partner vehicle ${index + 1}`}
-                  className="h-28 w-full rounded-2xl object-cover"
+                  onClick={() =>
+                    setLightbox({
+                      isOpen: true,
+                      title: `Bike Image ${index + 1}`,
+                      file: {
+                        path: api.asset(image.path),
+                        mimetype: image.mimetype,
+                        filename: image.filename,
+                      },
+                    })
+                  }
+                  className="h-28 w-full rounded-2xl object-cover cursor-pointer hover:opacity-90 transition duration-200"
                 />
               ))
             ) : (
@@ -635,7 +781,7 @@ function Partner() {
               {booking.pickup} to {booking.destination}
             </h4>
             <p className="theme-text-muted mt-2 text-sm">
-              Customer request accept karne se user ko partner assigned status turant dikhega.
+              Accepting this booking request will instantly notify the user.
             </p>
           </div>
 
@@ -778,30 +924,30 @@ function Partner() {
   const drawerConfig = {
     requests: {
       title: "All live requests",
-      subtitle: "Partner ke paas aayi saari open ride requests yahan dikhenge.",
+      subtitle: "All available open ride requests will appear here.",
       bookings: availableBookings,
-      empty: "Abhi koi live request available nahi hai.",
+      empty: "No live requests available at the moment.",
       render: renderIncomingRequestCard,
     },
     active: {
       title: "Active ride requests",
-      subtitle: "Accepted aur running rides jinka payment abhi complete nahi hua.",
+      subtitle: "Accepted and in-progress rides with pending payments.",
       bookings: activeBookings,
-      empty: "Abhi koi active ride nahi hai.",
+      empty: "No active rides at the moment.",
       render: renderRideCard,
     },
     payments: {
       title: "Complete and payment requests",
-      subtitle: "Payment pending aur paid rides ka complete workflow yahan dikhega.",
+      subtitle: "The complete history of pending and completed payments will be shown here.",
       bookings: paymentBookings,
-      empty: "Abhi koi completed/payment request nahi hai.",
+      empty: "No completed or pending payment requests.",
       render: renderRideCard,
     },
     earnings: {
       title: "Paid completed requests",
-      subtitle: "Jinki payment complete ho chuki hai unki earning details.",
+      subtitle: "Details of earnings from completed and paid rides.",
       bookings: completedBookings,
-      empty: "Abhi koi paid completed request nahi hai.",
+      empty: "No paid completed requests.",
       render: renderRideCard,
     },
   };
@@ -902,37 +1048,102 @@ function Partner() {
       return (
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            {requiredDocs.map((doc) => (
-              <label key={doc} className="theme-card-soft block rounded-[28px] p-4">
-                <span className="theme-text-muted mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.2em]">
-                  <FileText className="theme-accent h-4 w-4" />
-                  {doc}
-                </span>
-                <input type="file" name={doc} onChange={handleChange} accept="image/*,.pdf" className="w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-yellow-400 file:px-4 file:py-2 file:font-semibold file:text-black" />
-                <p className="theme-text-soft mt-3 text-xs">
-                  {formData[doc] ? formData[doc].name : "No file selected"}
-                </p>
-              </label>
-            ))}
+            {requiredDocs.map((doc) => {
+              const fileObj = formData[doc];
+              return (
+                <div key={doc} className="theme-card-soft block rounded-[28px] p-4 relative">
+                  <span className="theme-text-muted mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.2em]">
+                    <FileText className="theme-accent h-4 w-4" />
+                    {doc}
+                  </span>
+                  <input
+                    type="file"
+                    name={doc}
+                    onChange={handleChange}
+                    accept="image/*,.pdf"
+                    className="w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-yellow-400 file:px-4 file:py-2 file:font-semibold file:text-black"
+                  />
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="theme-text-soft text-xs truncate max-w-[70%]">
+                      {fileObj ? fileObj.name : "No file selected"}
+                    </p>
+                    {fileObj && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLightbox({
+                            isOpen: true,
+                            title: `${doc.toUpperCase()} Document`,
+                            file: {
+                              path: URL.createObjectURL(fileObj),
+                              mimetype: fileObj.type,
+                              filename: fileObj.name,
+                            },
+                          })
+                        }
+                        className="text-xs font-semibold text-yellow-500 hover:text-yellow-600 transition"
+                      >
+                        Preview Doc
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          <label className="theme-card-soft block rounded-[28px] p-4">
+          <div className="theme-card-soft block rounded-[28px] p-4">
             <span className="theme-text-muted mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.2em]">
               <ImagePlus className="theme-accent h-4 w-4" />
               Bike Images
             </span>
-            <input type="file" name="bikeImages" multiple onChange={handleChange} accept="image/*" className="w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-yellow-400 file:px-4 file:py-2 file:font-semibold file:text-black" />
+            <input
+              type="file"
+              name="bikeImages"
+              multiple
+              onChange={handleChange}
+              accept="image/*"
+              className="w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-yellow-400 file:px-4 file:py-2 file:font-semibold file:text-black"
+            />
             <p className="theme-text-soft mt-3 text-xs">
-              Minimum 2 aur maximum {maxBikeImages} bike images upload karein.
+              Upload minimum 2 and maximum {maxBikeImages} bike images. Click images to preview or "X" to delete.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              {formData.bikeImages.map((image, index) => (
-                <div key={`${image.name}-${index}`} className="overflow-hidden rounded-2xl border border-[var(--app-border)]">
-                  <img src={URL.createObjectURL(image)} alt="Bike preview" className="h-20 w-20 object-cover" />
-                </div>
-              ))}
+              {formData.bikeImages.map((image, index) => {
+                const imgUrl = URL.createObjectURL(image);
+                return (
+                  <div
+                    key={`${image.name}-${index}`}
+                    className="relative group overflow-hidden rounded-2xl border border-[var(--app-border)] h-20 w-20"
+                  >
+                    <img
+                      src={imgUrl}
+                      alt="Bike preview"
+                      onClick={() =>
+                        setLightbox({
+                          isOpen: true,
+                          title: `Bike Image ${index + 1}`,
+                          file: {
+                            path: imgUrl,
+                            mimetype: image.type,
+                            filename: image.name,
+                          },
+                        })
+                      }
+                      className="h-full w-full object-cover cursor-pointer hover:scale-105 transition duration-250"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeBikeImage(index)}
+                      className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 hover:bg-red-600 text-white text-xs shadow-md transition"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          </label>
+          </div>
         </div>
       );
     }
@@ -986,8 +1197,7 @@ function Partner() {
                 </p>
                 <h3 className="mt-2 text-2xl font-black">Check every partner detail</h3>
                 <p className="theme-text-muted mt-2 text-sm">
-                  Green tick ka matlab detail complete hai. Yellow warning ka matlab submit
-                  se pehle correction chahiye.
+                  Green checkmark means details are complete. Yellow warning indicates corrections needed before submission.
                 </p>
               </div>
               <div
@@ -1056,12 +1266,11 @@ function Partner() {
 
           {!reviewReady ? (
             <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-200">
-              Missing details ko previous steps me jaakar complete kijiye, phir submit active
-              flow me approve ke liye jayega.
+              Please complete the missing details in the previous steps to enable submission.
             </div>
           ) : (
             <div className="rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
-              Required partner details complete hain. Ab admin review ke liye submit kar sakte hain.
+              Required partner details are complete. You can now submit for admin review.
             </div>
           )}
           </div>
@@ -1098,14 +1307,14 @@ function Partner() {
               icon: Banknote,
               drawer: "earnings",
             },
-          ].map(({ label, value, icon: Icon, drawer }) => (
+          ].map(({ label, value, icon, drawer }) => (
             <button
               key={label}
               type="button"
               onClick={() => setRequestDrawer(drawer)}
               className="theme-card-soft rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:border-yellow-500/40"
             >
-              <Icon className="theme-accent h-5 w-5" />
+              {React.createElement(icon, { className: "theme-accent h-5 w-5" })}
               <p className="theme-text-soft mt-3 text-xs uppercase tracking-[0.18em]">
                 {label}
               </p>
@@ -1133,13 +1342,13 @@ function Partner() {
 
           {!isApproved ? (
             <p className="theme-text-soft mt-4 text-sm">
-              Admin approval ke baad yahan available bookings dikhengi.
+              Available bookings will appear here after admin approval.
             </p>
           ) : availableBookings.length ? (
             <div className="mt-4 space-y-4">
               <div className="rounded-2xl border border-yellow-500/25 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-100">
                 <BellRing className="mr-2 inline h-4 w-4" />
-                {availableBookings.length} new booking request partner panel me aayi hai.
+                {availableBookings.length} new booking request(s) received in partner panel.
               </div>
               {availableBookings.map((booking) => renderIncomingRequestCard(booking))}
             </div>
@@ -1185,8 +1394,8 @@ function Partner() {
             Welcome, {user?.name}
           </h1>
           <p className="theme-text-muted mt-3 max-w-3xl text-sm sm:text-base">
-            Vehicle details, documents, bank review, admin verification aur live
-            booking section ek connected flow me.
+            Vehicle details, documents, bank review, admin verification, and live
+            bookings are all managed in a single connected flow.
           </p>
 
           <div className="mt-6 grid gap-3 md:grid-cols-5">
@@ -1272,6 +1481,12 @@ function Partner() {
         </div>
       </div>
       {renderRequestDrawer()}
+      <LightboxModal
+        isOpen={lightbox.isOpen}
+        onClose={() => setLightbox({ isOpen: false, title: "", file: null })}
+        title={lightbox.title}
+        file={lightbox.file}
+      />
     </div>
   );
 }

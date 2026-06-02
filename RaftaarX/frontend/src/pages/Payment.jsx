@@ -66,7 +66,7 @@ function Payment() {
     }
 
     if (booking.serviceStage !== "payment_pending") {
-      setMessage("Partner service complete mark karega tab payment unlock hoga.");
+      setMessage("Payment will unlock after the partner marks the service as completed.");
       return;
     }
 
@@ -109,7 +109,7 @@ function Payment() {
         <DashboardHeader
           eyebrow="Payment"
           title="Complete the booking payment"
-          subtitle="Service complete hone ke baad yahan se payment confirm karke trip close ki ja sakti hai."
+          subtitle="Once the service is completed, payment can be confirmed here to close the trip."
           badge="Step 5 of 5"
           quickLinks={[
             { label: "Booking", to: "/user" },
@@ -162,11 +162,11 @@ function Payment() {
           <div className="theme-card rounded-[30px] p-5 sm:p-6">
             <h2 className="text-3xl font-black">Choose payment method</h2>
             <p className="theme-text-muted mt-2 text-sm">
-              Demo flow ke liye selected method ke saath booking ko final paid state me move kiya jayega.
+              For the demo, this action will transition the booking to the final paid state using the selected method.
             </p>
 
             <div className="mt-6 grid gap-4">
-              {paymentOptions.map(({ label, value, icon: Icon, note }) => {
+              {paymentOptions.map(({ label, value, icon, note }) => {
                 const selected = selectedMethod === value;
 
                 return (
@@ -179,7 +179,7 @@ function Payment() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className="theme-accent h-5 w-5" />
+                      {React.createElement(icon, { className: "theme-accent h-5 w-5" })}
                       <div>
                         <span className="block font-semibold">{label}</span>
                         <span className="theme-text-soft text-xs">{note}</span>

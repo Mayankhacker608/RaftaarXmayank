@@ -14,6 +14,7 @@ import {
 
 import { useAuth } from "../hooks/useAuth.js";
 import { api } from "../lib/api.js";
+import LightboxModal from "../components/LightboxModal.jsx";
 
 function formatDate(value) {
   return new Date(value).toLocaleString("en-IN", {
@@ -70,6 +71,7 @@ function Admin() {
   const [activeTab, setActiveTab] = useState("partners");
   const [updatingId, setUpdatingId] = useState("");
   const [error, setError] = useState("");
+  const [lightbox, setLightbox] = useState({ isOpen: false, title: "", file: null });
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -180,8 +182,7 @@ function Admin() {
                 Welcome, {user?.name}
               </h1>
               <p className="mt-3 max-w-3xl text-sm text-gray-300 sm:text-base">
-                Partner approvals, booking activity, aur operational overview ek hi
-                dashboard me manage kijiye.
+                Manage partner approvals, booking activity, and operational overview all from a single dashboard.
               </p>
             </div>
 
@@ -282,15 +283,24 @@ function Admin() {
                             {doc}
                           </span>
                           {partner[doc] ? (
-                            <a
-                              href={api.asset(partner[doc].path)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-yellow-300"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setLightbox({
+                                  isOpen: true,
+                                  title: `${doc.toUpperCase()} Document - ${partner.name}`,
+                                  file: {
+                                    path: api.asset(partner[doc].path),
+                                    mimetype: partner[doc].mimetype,
+                                    filename: partner[doc].filename,
+                                  },
+                                })
+                              }
+                              className="inline-flex items-center gap-1 text-sm text-yellow-300 hover:text-yellow-400 transition bg-transparent border-0 cursor-pointer"
                             >
                               <Eye className="h-4 w-4" />
                               Open
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-xs text-gray-500">Missing</span>
                           )}
@@ -305,7 +315,18 @@ function Admin() {
                             key={`${partner._id}-${index}`}
                             src={api.asset(img.path)}
                             alt={`Bike ${index + 1}`}
-                            className="h-28 w-full rounded-2xl object-cover"
+                            onClick={() =>
+                              setLightbox({
+                                isOpen: true,
+                                title: `Bike Image ${index + 1} - ${partner.name}`,
+                                file: {
+                                  path: api.asset(img.path),
+                                  mimetype: img.mimetype,
+                                  filename: img.filename,
+                                },
+                              })
+                            }
+                            className="h-28 w-full rounded-2xl object-cover cursor-pointer hover:opacity-85 transition duration-200"
                           />
                         ))
                       ) : (
@@ -406,6 +427,12 @@ function Admin() {
           )}
         </motion.div>
       </div>
+      <LightboxModal
+        isOpen={lightbox.isOpen}
+        onClose={() => setLightbox({ isOpen: false, title: "", file: null })}
+        title={lightbox.title}
+        file={lightbox.file}
+      />
     </div>
   );
 }
