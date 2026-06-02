@@ -1,1 +1,16 @@
-{"projectId":"prj_1r1gm5RkEUfT3czlNPojRG89SyUg","orgId":"team_uEboEpiSKFhs9aSPcj1LraCO","projectName":"frontend"}
+{
+  "projectId": "prj_1r1gm5RkEUfT3czlNPojRG89SyUg",
+  "orgId": "team_uEboEpiSKFhs9aSPcj1LraCO",
+  "projectName": "frontend",
+  "experimentalServices": {
+    "frontend": {
+      "root": "frontend",
+      "routePrefix": "/",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "backend",
+      "routePrefix": "/_/backend"
+    }
+  }
+}
