@@ -16,6 +16,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultClient)
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const allowAllOrigins = process.env.ALLOW_ALL_ORIGINS === "true";
 const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const vercelPattern = /^https?:\/\/.*\.vercel\.app$/;
 const renderPattern = /^https?:\/\/.*\.onrender\.com$/;
@@ -49,23 +50,34 @@ app.use(
 );
 app.use(
   cors({
-    origin(origin, callback) {
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        localhostPattern.test(origin) ||
-        vercelPattern.test(origin) ||
-        renderPattern.test(origin)
-      ) {
-        callback(null, true);
-        return;
-      }
+    origin: allowAllOrigins
+      ? true
+      : (origin, callback) => {
+          if (
+            !origin ||
+            allowedOrigins.includes(origin) ||
+            localhostPattern.test(origin) ||
+            vercelPattern.test(origin) ||
+            renderPattern.test(origin)
+          ) {
+            callback(null, true);
+            return;
+          }
 
-      callback(new Error("Origin is not allowed by CORS"));
-    },
+          callback(new Error("Origin is not allowed by CORS"));
+        },
     credentials: true,
   })
 );
+
+if (allowAllOrigins) {
+  // Helpful debug message when the permissive toggle is enabled in env
+  // Do NOT enable in production unless you understand the implications.
+  // This mirrors the request origin for credentialed requests.
+  // See: https://github.com/expressjs/cors#configuration-options
+  // and set ALLOW_ALL_ORIGINS=true for temporary debugging.
+  console.warn("WARNING: ALLOW_ALL_ORIGINS is enabled — CORS is permissive.");
+}
 app.use(async (_req, _res, next) => {
   try {
     await connectDatabase();

@@ -91,6 +91,12 @@ Important production values:
 - `CLIENT_URL=https://your-vercel-domain.vercel.app`
 - `ALLOWED_ORIGINS=https://your-vercel-domain.vercel.app`
 
+Notes:
+
+- For CORS debugging only you can temporarily set `ALLOW_ALL_ORIGINS=true` on the backend service. This makes the server accept requests from any origin — do not enable long-term in production.
+- Ensure your frontend Vercel project's `VITE_API_URL` points to the full backend API base (for example `https://your-backend-domain.com/api`).
+- If you use a custom frontend domain, include that domain in `ALLOWED_ORIGINS` (comma-separated) or set `CLIENT_URL` to the frontend URL.
+
 ## Vercel Deploy Steps
 
 1. Push the project to GitHub.
