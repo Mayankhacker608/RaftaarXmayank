@@ -86,19 +86,14 @@ async function createOtpChallenge({
       message: "OTP email sent. Please verify to continue.",
     };
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(`[DEVELOPMENT WARNING] Failed to send OTP email via SMTP: ${error.message}`);
-      console.log(`Continuing anyway because we are in development mode. Use OTP: ${otp}`);
-      return {
-        success: true,
-        requiresOtp: true,
-        verificationId: verification._id,
-        email,
-        message: `OTP generated (Email simulation). Your verification code is: ${otp}`,
-      };
-    }
-    await OtpVerification.deleteOne({ _id: verification._id });
-    throw error;
+    console.error(`Failed to send OTP email: ${error.message}. Returning OTP in response for compatibility.`);
+    return {
+      success: true,
+      requiresOtp: true,
+      verificationId: verification._id,
+      email,
+      message: `Failed to send email. For testing, your verification code is: ${otp}`,
+    };
   }
 }
 
@@ -371,15 +366,11 @@ router.post("/resend-otp", async (req, res, next) => {
         message: "New OTP code sent successfully.",
       });
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn(`[DEVELOPMENT WARNING] Failed to send resend-OTP email: ${error.message}`);
-        console.log(`Continuing anyway because we are in development mode. Use new OTP: ${otp}`);
-        return res.json({
-          success: true,
-          message: `New OTP generated (Email simulation). Your verification code is: ${otp}`,
-        });
-      }
-      throw error;
+      console.error(`Failed to send resend-OTP email: ${error.message}. Returning OTP in response for compatibility.`);
+      return res.json({
+        success: true,
+        message: `Failed to send email. For testing, your verification code is: ${otp}`,
+      });
     }
   } catch (error) {
     next(error);

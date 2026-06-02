@@ -17,6 +17,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultClient)
   .map((origin) => origin.trim())
   .filter(Boolean);
 const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const vercelPattern = /^https?:\/\/.*\.vercel\.app$/;
 const localAddressPattern = /^(::1|::ffff:127\.0\.0\.1|127\.0\.0\.1)$/;
 
 const apiLimiter = rateLimit({
@@ -51,7 +52,8 @@ app.use(
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
-        localhostPattern.test(origin)
+        localhostPattern.test(origin) ||
+        vercelPattern.test(origin)
       ) {
         callback(null, true);
         return;
