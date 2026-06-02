@@ -2,9 +2,41 @@
 
 ## Recommended Production Setup
 
-- Frontend: Vercel
-- Backend: Render or Railway
+- Frontend: Render Static Site or Vercel
+- Backend: Render Web Service or Railway
 - Database: MongoDB Atlas
+
+## Render Blueprint Deploy
+
+This repo includes a root-level `render.yaml` that creates:
+
+- `raftaarx-backend`: Node web service from `RaftaarX/backend`
+- `raftaarx-frontend`: static Vite frontend from `RaftaarX/frontend`
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. In Render, choose **New > Blueprint**.
+3. Connect `Mayankhacker608/RaftaarXmayank`.
+4. Keep the default Blueprint file path: `render.yaml`.
+5. Fill the prompted environment variables.
+6. Deploy the Blueprint.
+
+Render will auto-deploy both services on future commits to the connected branch.
+
+Prompted backend values:
+
+- `MONGODB_URL`
+- `AUTH_GOOGLE_ID`
+- `AUTH_GOOGLE_SECRET`
+- `EMAIL_USER`
+- `EMAIL_PASS`
+
+Prompted frontend value:
+
+- `VITE_GOOGLE_CLIENT_ID`
+
+The Blueprint generates `AUTH_SECRET` and `ADMIN_SIGNUP_KEY` automatically. If you need a known admin signup key, replace the generated value in the Render dashboard after the first deploy.
 
 ## Why not deploy the current backend on Vercel?
 

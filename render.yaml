@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: raftaarx-backend
+    runtime: node
+    rootDir: RaftaarX/backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.15.0
+      - key: CLIENT_URL
+        value: https://raftaarx-frontend.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://raftaarx-frontend.onrender.com
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: ADMIN_SIGNUP_KEY
+        generateValue: true
+      - key: MONGODB_URL
+        sync: false
+      - key: AUTH_GOOGLE_ID
+        sync: false
+      - key: AUTH_GOOGLE_SECRET
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+
+  - type: web
+    name: raftaarx-frontend
+    runtime: static
+    rootDir: RaftaarX/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 22.15.0
+      - key: VITE_API_URL
+        value: https://raftaarx-backend.onrender.com/api
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
